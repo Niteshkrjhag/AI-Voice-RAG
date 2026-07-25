@@ -33,15 +33,15 @@ class StreamingTranscriber:
         options = StreamingClientOptions(api_key=config.ASSEMBLYAI_API_KEY)
         self._client = StreamingClient(options)
         
-        self._client.on(StreamingEvents.SESSION_OPENED, self._on_open)
-        self._client.on(StreamingEvents.DATA, self._on_data)
-        self._client.on(StreamingEvents.ERROR, self._on_error)
-        self._client.on(StreamingEvents.SESSION_CLOSED, self._on_close)
+        self._client.on(StreamingEvents.Begin, self._on_open)
+        self._client.on(StreamingEvents.Turn, self._on_data)
+        self._client.on(StreamingEvents.Error, self._on_error)
+        self._client.on(StreamingEvents.Termination, self._on_close)
 
-    def _on_open(self, session_opened):
+    def _on_open(self, client, session_opened):
         log.info("asr_session_opened")
 
-    def _on_data(self, event):
+    def _on_data(self, client, event):
         if isinstance(event, TurnEvent):
             if not event.transcript:
                 return
@@ -55,11 +55,11 @@ class StreamingTranscriber:
             if self.on_transcript:
                 self._loop.call_soon_threadsafe(self.on_transcript, event.transcript, is_final, received_time)
 
-    def _on_error(self, error):
+    def _on_error(self, client, error):
         error_msg = getattr(error, "message", str(error))
         log.error("asr_error", error=error_msg)
 
-    def _on_close(self, _=None):
+    def _on_close(self, client, _=None):
         log.info("asr_session_closed")
 
     def connect(self):
