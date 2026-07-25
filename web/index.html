@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Engineer Assessment Dashboard</title>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+
+    <div class="app-container">
+        <!-- Sidebar / Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>AI Voice System</h2>
+                <span class="badge">Production</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-target="q1">
+                    <span class="icon">📞</span> Voice Agent (Q1)
+                </button>
+                <button class="nav-btn" data-target="q2">
+                    <span class="icon">🔍</span> Knowledge Base (Q2)
+                </button>
+                <button class="nav-btn" data-target="q3">
+                    <span class="icon">🌍</span> Multilingual (Q3)
+                </button>
+                <button class="nav-btn" data-target="q4">
+                    <span class="icon">⚡️</span> Live Insights (Q4)
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>Status: <span class="status-indicator online"></span> Online</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            
+            <!-- Q1: Voice Agent -->
+            <section id="q1" class="tab-pane active">
+                <header class="tab-header">
+                    <h1>Health Insurance Voice Agent</h1>
+                    <p>Web-calling interface powered by Vapi/Twilio SDKs.</p>
+                </header>
+                <div class="glass-card flex-center">
+                    <div class="call-interface">
+                        <div class="avatar-ring">🤖</div>
+                        <h3>Agent Ready</h3>
+                        <p>Click below to connect to the Web SDK.</p>
+                        <button id="btn-q1-call" class="primary-btn">Start Call</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q2: Knowledge Base -->
+            <section id="q2" class="tab-pane">
+                <header class="tab-header">
+                    <h1>RAG Retrieval Sandbox</h1>
+                    <p>Test the vectorized knowledge base directly.</p>
+                </header>
+                <div class="glass-card">
+                    <div class="search-box">
+                        <input type="text" id="q2-search-input" placeholder="e.g. What is the waiting period for cataracts?">
+                        <button id="btn-q2-search" class="primary-btn">Search</button>
+                    </div>
+                    <div class="results-container" id="q2-results">
+                        <p class="empty-state">Search results will appear here...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q3: Multilingual Bots -->
+            <section id="q3" class="tab-pane">
+                <header class="tab-header">
+                    <h1>Native-Language Bots</h1>
+                    <p>Test localized agents for Philippines and Indonesia.</p>
+                </header>
+                <div class="grid-2-col">
+                    <div class="glass-card flex-center">
+                        <h3>🇵🇭 Philippines Agent</h3>
+                        <p>Taglish / Bancassurance</p>
+                        <button class="secondary-btn mt-4">Call PH Agent</button>
+                    </div>
+                    <div class="glass-card flex-center">
+                        <h3>🇮🇩 Indonesia Agent</h3>
+                        <p>Bahasa Indonesia / Multifinance</p>
+                        <button class="secondary-btn mt-4">Call ID Agent</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Q4: Live Insights (Copied from existing UI) -->
+            <section id="q4" class="tab-pane">
+                <header class="tab-header">
+                    <h1>Real-Time Insights & Nudges</h1>
+                    <p>Simulating an active call stream with Gemini 3.5 Flash.</p>
+                </header>
+                <div class="grid-2-col dashboard-q4">
+                    <div class="glass-card panel">
+                        <div class="panel-header">
+                            <h3>Live Call Transcript</h3>
+                            <button id="btn-q4-start" class="primary-btn small">Start Simulated Call</button>
+                        </div>
+                        <div id="q4-transcript-box" class="scroll-box">
+                            <p class="empty-state">Waiting for audio stream...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card panel">
+                        <div class="panel-header">
+                            <h3>Agent Nudges & Alerts</h3>
+                        </div>
+                        <div id="q4-nudge-box" class="scroll-box nudge-container">
+                            <!-- Nudges injected here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
