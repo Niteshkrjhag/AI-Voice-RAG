@@ -46,7 +46,7 @@ def init_qdrant_collection():
     Initialize the Qdrant collection if it doesn't exist.
     Configured for OpenAI's text-embedding-3-small (1536 dimensions).
     """
-    collection_name = config.QDRANT_COLLECTION
+    collection_name = config.QDRANT_COLLECTION_NAME
 
     if not qdrant_client.collection_exists(collection_name=collection_name):
         log.info("creating_qdrant_collection", collection=collection_name)
@@ -94,7 +94,7 @@ async def index_records(records: List[KBRecord]):
 
     # Upsert points into Qdrant
     qdrant_client.upsert(
-        collection_name=config.QDRANT_COLLECTION,
+        collection_name=config.QDRANT_COLLECTION_NAME,
         points=points
     )
-    log.info("records_indexed", count=len(points), collection=config.QDRANT_COLLECTION)
+    log.info("records_indexed", count=len(points), collection=config.QDRANT_COLLECTION_NAME)

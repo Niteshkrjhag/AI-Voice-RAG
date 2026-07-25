@@ -36,7 +36,7 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
     # 2. Search Qdrant
     try:
         search_results = qdrant_client.search(
-            collection_name=config.QDRANT_COLLECTION,
+            collection_name=config.QDRANT_COLLECTION_NAME,
             query_vector=query_vector,
             limit=limit,
         )

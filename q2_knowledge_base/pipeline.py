@@ -51,7 +51,7 @@ async def run_pipeline():
     unique_docs = deduplicate(cleaned_docs, content_key="content")
     
     # Save cleaned documents for traceability
-    cleaned_dir = config.DATA_DIR / "cleaned"
+    cleaned_dir = config.DATA_CLEANED_DIR
     cleaned_dir.mkdir(parents=True, exist_ok=True)
     for doc in unique_docs:
         safe_name = f"doc_{doc['content_hash'][:8]}.json"
