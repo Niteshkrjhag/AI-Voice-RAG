@@ -9,6 +9,8 @@ Uses Gemini to analyze partial and final transcripts to detect:
 
 import time
 import json
+import re
+import asyncio
 from google import genai
 from google.genai import types
 
@@ -45,20 +47,26 @@ class SignalExtractor:
         
         try:
             # We use the fast Gemini Flash model for real-time latency
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.system_prompt,
-                    response_mime_type="application/json",
-                    temperature=0.1
+            # Using asyncio.to_thread with wait_for to prevent indefinite hangs
+            def call_gemini():
+                return client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=self.system_prompt,
+                        response_mime_type="application/json",
+                        temperature=0.1
+                    )
                 )
-            )
+                
+            response = await asyncio.wait_for(asyncio.to_thread(call_gemini), timeout=5.0)
             
             latency_ms = int((time.time() - start_time) * 1000)
             
             try:
-                signals = json.loads(response.text)
+                # Strip markdown JSON fences if the LLM hallucinated them despite response_mime_type
+                clean_text = re.sub(r'```json\n|\n```', '', response.text).strip()
+                signals = json.loads(clean_text)
             except json.JSONDecodeError:
                 signals = {}
                 

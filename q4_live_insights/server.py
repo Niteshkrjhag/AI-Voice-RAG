@@ -5,6 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import json
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from shared.logger import get_logger
 from q4_live_insights.pipeline import AudioStreamPipeline
 
@@ -12,6 +14,15 @@ log = get_logger("q4.server")
 
 # Initialize the FastAPI web server. This will handle HTTP requests and WebSocket connections.
 app = FastAPI(title="Live Insights Dashboard")
+
+# Add CORS so dashboards on other domains can connect
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # This list keeps track of all active browser windows connected to our WebSocket.
 # We need this so we can broadcast the live nudges to everyone looking at the dashboard.
@@ -43,11 +54,17 @@ async def broadcast_nudge(nudge_type: str, message: str, context: dict = None):
         "context": context or {}
     }
     # Loop through every connected browser and send the data
+    dead_connections = []
     for connection in active_connections:
         try:
             await connection.send_text(json.dumps(payload))
         except Exception as e:
+            dead_connections.append(connection)
             log.error("ws_broadcast_failed", error=str(e))
+            
+    for dc in dead_connections:
+        if dc in active_connections:
+            active_connections.remove(dc)
 
 async def broadcast_transcript(text: str, is_final: bool):
     """Stream live transcripts to the UI for visibility."""
@@ -56,11 +73,16 @@ async def broadcast_transcript(text: str, is_final: bool):
         "text": text,
         "is_final": is_final
     }
+    dead_connections = []
     for connection in active_connections:
         try:
             await connection.send_text(json.dumps(payload))
         except Exception as e:
-            pass
+            dead_connections.append(connection)
+            
+    for dc in dead_connections:
+        if dc in active_connections:
+            active_connections.remove(dc)
 
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
