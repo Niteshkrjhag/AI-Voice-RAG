@@ -125,6 +125,17 @@ If a customer is very angry, the AI might detect "Frustration" 10 times in a row
 
 ---
 
+## 🛡️ Reliability & Resilience (Production Best Practices)
+
+To ensure this system doesn't crash in a real enterprise environment, we implemented several safety nets:
+1. **Dynamic Nudges:** The UI doesn't just show generic alerts; it extracts the actual `reasoning` from the LLM, making nudges highly specific (e.g., "Customer mentioned family, offer Floater Rider" vs just "Cross-sell opportunity").
+2. **Robust JSON Parsing:** LLMs sometimes hallucinate formatting. Our pipeline explicitly strips markdown tags before parsing, preventing the background streaming tasks from crashing silently.
+3. **Async Deadlock Prevention:** The Live Insights AI calls use explicit `asyncio.wait_for` timeouts. If the Google API hangs, the task cleanly exits instead of leaking memory indefinitely.
+4. **WebSocket Memory Management:** The server actively sweeps for and removes disconnected client sockets during broadcast loops, preventing CPU and memory bloat over long server uptimes.
+5. **Token Optimization & CORS:** The RAG API response is flattened to remove useless Pydantic metadata, drastically reducing the token cost for Vapi. Both FastAPI servers also implement strict `CORSMiddleware` so decoupled dashboards can safely connect.
+
+---
+
 ## ⚠️ Known Limitations & Future Improvements (10x Scale)
 
 If we were to deploy this to millions of users, we would need to fix a few things:
