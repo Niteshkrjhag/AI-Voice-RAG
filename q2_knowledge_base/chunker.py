@@ -57,12 +57,24 @@ def chunk_document(
         hash_str = hashlib.md5(f"{doc_id}_chunk_{i}".encode()).hexdigest()
         record_id = str(uuid.UUID(hash_str))
 
+        # Taxonomy Classifier Logic
+        text_lower = text.lower()
+        category = "product_info"
+        if any(w in text_lower for w in ["rule", "must", "required", "policy"]):
+            category = "policy_rules"
+        elif any(w in text_lower for w in ["price", "cost", "premium"]):
+            category = "pricing"
+        elif any(w in text_lower for w in ["eligible", "qualify", "age"]):
+            category = "eligibility_criteria"
+        elif any(w in text_lower for w in ["claim", "reimburse"]):
+            category = "claims_process"
+
         # Build schema-compliant record
         record = KBRecord(
             record_id=record_id,
             title=title,
             content=text,
-            category="health_insurance", # Default category
+            category=category,
             source=f"scraped/{doc_id}",
             source_url=source_url,
             pii_detected=pii_flags,

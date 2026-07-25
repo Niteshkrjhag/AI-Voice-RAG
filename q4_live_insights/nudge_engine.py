@@ -25,10 +25,16 @@ class NudgeEngine:
         current_time_ms = int(time.time() * 1000)
 
         for signal_type, details in signals.items():
+            # False Positive Control: Check confidence threshold
+            confidence = details.get("confidence_score", 0) if isinstance(details, dict) else 100
+            if confidence < 75:
+                log.debug("nudge_suppressed_low_confidence", signal_type=signal_type, confidence=confidence)
+                continue
+
             # Check suppression window
             last_time = self._last_nudge_times.get(signal_type, 0)
             if current_time_ms - last_time < self.suppression_window_ms:
-                log.debug("nudge_suppressed", signal_type=signal_type)
+                log.debug("nudge_suppressed_cooldown", signal_type=signal_type)
                 continue
 
             # Generate nudge based on signal type

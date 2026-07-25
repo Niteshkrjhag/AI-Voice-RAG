@@ -121,6 +121,38 @@ def standardize_terminology(text: str) -> str:
         text = re.compile(pattern, re.IGNORECASE).sub(replacement, text)
     return text
 
+def standardize_dates(text: str) -> str:
+    """
+    Standardize dates to ISO format (YYYY-MM-DD).
+    Example: 12/05/2026 or 12th May 2026 -> 2026-05-12
+    Uses simple regex for common formats found in policies.
+    """
+    # Simple regex for DD/MM/YYYY or DD-MM-YYYY
+    text = re.sub(r'\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b', r'\3-\2-\1', text)
+    return text
+
+def standardize_headings(text: str) -> str:
+    """
+    Standardize markdown headings to ensure a single `#` structure or consistent spacing.
+    """
+    # Ensure space after #
+    text = re.sub(r'^(#+)([^#\s])', r'\1 \2', text, flags=re.MULTILINE)
+    return text
+
+def standardize_form_fields(text: str) -> str:
+    """
+    Standardize common form fields found in PDFs or scraped tables.
+    """
+    form_map = {
+        r'(?i)\bfirst\s*name\b': 'FirstName',
+        r'(?i)\blast\s*name\b': 'LastName',
+        r'(?i)\bdate\s*of\s*birth\b': 'DOB',
+        r'(?i)\bphone\s*number\b': 'PhoneNumber'
+    }
+    for pattern, replacement in form_map.items():
+        text = re.sub(pattern, replacement, text)
+    return text
+
 
 def content_hash(text: str) -> str:
     """
@@ -186,8 +218,11 @@ def clean_document(raw_content: dict) -> Optional[dict]:
     # Step 2: normalize whitespace
     cleaned = normalize_whitespace(cleaned)
 
-    # Step 3: standardize domain terminology
+    # Step 3: standardize domain terminology, dates, headings, and form fields
     cleaned = standardize_terminology(cleaned)
+    cleaned = standardize_dates(cleaned)
+    cleaned = standardize_headings(cleaned)
+    cleaned = standardize_form_fields(cleaned)
 
     # Step 4: detect PII before redaction (for metadata)
     pii_info = detect_pii(cleaned)

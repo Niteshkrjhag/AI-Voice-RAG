@@ -30,6 +30,7 @@ class SignalExtractor:
             "You are a real-time call monitoring AI for a general insurance (auto, home, health) call center. "
             "Analyze the latest transcript segment and return a JSON object with any detected signals. "
             "Focus ONLY on: 'intent_shift', 'compliance_gap', 'frustration', 'buying_signal', 'missed_cross_sell', 'callback_need'. "
+            "For each signal, you MUST provide a 'confidence_score' from 0 to 100 based on how explicit the signal is. "
             "If none, return empty JSON {}."
         )
 
