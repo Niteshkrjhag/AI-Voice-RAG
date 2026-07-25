@@ -36,6 +36,9 @@
                 <button class="nav-btn" data-target="q4">
                     <span class="icon">⚡️</span> Live Insights (Q4)
                 </button>
+                <button class="nav-btn" data-target="telemetry">
+                    <span class="icon">📊</span> Telemetry
+                </button>
             </nav>
             
             <div class="sidebar-footer">
@@ -123,6 +126,26 @@
                         <div id="q4-nudge-box" class="scroll-box nudge-container">
                             <!-- Nudges injected here -->
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Telemetry Tab -->
+            <section id="telemetry" class="tab-pane">
+                <header class="tab-header">
+                    <h1>System Telemetry</h1>
+                    <p>Real-time metrics for API hits, latency, and system health.</p>
+                </header>
+                <div class="grid-2-col">
+                    <div class="glass-card flex-center">
+                        <h2 style="font-size: 3rem; color: var(--primary);" id="metric-api-hits">0</h2>
+                        <h3>Total API Hits</h3>
+                        <p>Search & Extraction calls</p>
+                    </div>
+                    <div class="glass-card flex-center">
+                        <h2 style="font-size: 3rem; color: var(--secondary);" id="metric-avg-e2e">0ms</h2>
+                        <h3>Avg End-To-End Latency</h3>
+                        <p>Audio -> Transcript -> LLM -> UI</p>
                     </div>
                 </div>
             </section>

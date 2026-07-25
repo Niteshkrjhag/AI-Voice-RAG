@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from shared.logger import get_logger
 from q4_live_insights.pipeline import AudioStreamPipeline
+from pydantic import BaseModel
 
 # 1. Mount the global web directory
 WEB_DIR = Path(__file__).parent.parent / "web"
@@ -35,6 +36,14 @@ active_connections: list[WebSocket] = []
 
 # SDE-3: Global state lock to prevent concurrent audio streams
 is_streaming = False
+
+# Global Pipeline for Live Vapi Calls (Q1/Q3 -> Q4 integration)
+# We initialize it lazily when the first route is called so the event loop is ready.
+global_pipeline = None
+
+class TranscriptPayload(BaseModel):
+    text: str
+    is_final: bool
 
 @app.websocket("/ws/nudges")
 async def websocket_endpoint(websocket: WebSocket):
@@ -137,6 +146,29 @@ async def start_stream(background_tasks: BackgroundTasks):
     except Exception as e:
         is_streaming = False
         raise e
+
+@app.post("/analyze_transcript_direct")
+async def analyze_transcript_direct(payload: TranscriptPayload):
+    """
+    Called by the web frontend (app.js) whenever Vapi streams a transcript.
+    Passes it directly into the Q4 pipeline to trigger nudges.
+    """
+    global global_pipeline
+    if not global_pipeline:
+        global_pipeline = AudioStreamPipeline(
+            on_nudge=broadcast_nudge,
+            on_transcript=broadcast_transcript
+        )
+    
+    # Broadcast the transcript to the UI so it shows up in the Q4 window
+    await broadcast_transcript(payload.text, payload.is_final)
+    
+    # Pass to the analyzer which runs Gemini and the Nudge Engine
+    # We must await it here or run it as a background task. 
+    # _analyze_and_nudge is async and handles its own throttling.
+    import time
+    asyncio.create_task(global_pipeline._analyze_and_nudge(payload.text, payload.is_final, time.time()))
+    return {"status": "queued"}
 
 if __name__ == "__main__":
     import uvicorn

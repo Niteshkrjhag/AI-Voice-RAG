@@ -2,22 +2,49 @@ import Vapi from 'https://esm.sh/@vapi-ai/web';
 
 document.addEventListener("DOMContentLoaded", () => {
     
-    // --- Navigation Logic ---
+    // --- Navigation & State Persistence Logic ---
     const navButtons = document.querySelectorAll('.nav-btn');
     const tabPanes = document.querySelectorAll('.tab-pane');
 
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Remove active class from all
-            navButtons.forEach(b => b.classList.remove('active'));
-            tabPanes.forEach(p => p.classList.remove('active'));
+    function switchTab(targetId) {
+        navButtons.forEach(b => b.classList.remove('active'));
+        tabPanes.forEach(p => p.classList.remove('active'));
 
-            // Add active class to clicked
-            btn.classList.add('active');
-            const targetId = btn.getAttribute('data-target');
-            document.getElementById(targetId).classList.add('active');
-        });
+        const activeBtn = document.querySelector(`.nav-btn[data-target="${targetId}"]`);
+        const activePane = document.getElementById(targetId);
+        
+        if (activeBtn) activeBtn.classList.add('active');
+        if (activePane) activePane.classList.add('active');
+        
+        localStorage.setItem('activeTab', targetId);
+    }
+
+    // Restore last active tab
+    const savedTab = localStorage.getItem('activeTab') || 'q1';
+    switchTab(savedTab);
+
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.getAttribute('data-target')));
     });
+
+    // --- Global Telemetry State ---
+    let telemetryState = {
+        apiHits: 0,
+        totalE2ELatency: 0,
+        latencyCount: 0
+    };
+
+    function updateTelemetry(hitsIncrement = 0, newE2ELatency = null) {
+        telemetryState.apiHits += hitsIncrement;
+        document.getElementById('metric-api-hits').innerText = telemetryState.apiHits;
+
+        if (newE2ELatency !== null) {
+            telemetryState.totalE2ELatency += newE2ELatency;
+            telemetryState.latencyCount += 1;
+            const avg = Math.round(telemetryState.totalE2ELatency / telemetryState.latencyCount);
+            document.getElementById('metric-avg-e2e').innerText = `${avg}ms`;
+        }
+    }
 
 
     // --- Q2: Knowledge Base Retrieval ---
@@ -32,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
         resultsContainer.innerHTML = '<p class="empty-state">Searching...</p>';
 
         try {
+            updateTelemetry(1); // Track Q2 Search API Hit
             // Fetch from Q2 API mounted on unified server
             const res = await fetch('/q2/api/v1/search', {
                 method: 'POST',
@@ -136,6 +164,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 `;
                 nudgeBox.appendChild(card);
                 nudgeBox.scrollTop = nudgeBox.scrollHeight;
+                
+                // Track Telemetry
+                if (data.context && data.context.e2e_ms) {
+                    updateTelemetry(1, data.context.e2e_ms); // Extractor call counts as hit
+                }
             }
         };
 
@@ -156,6 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
         startQ4Btn.textContent = 'Streaming...';
 
         try {
+            updateTelemetry(1); // Track Q4 Stream API Hit
             await fetch('/q4/start_stream', { method: 'POST' });
         } catch (e) {
             console.error("Failed to start stream", e);
@@ -213,6 +247,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentCallButton.style.backgroundColor = '';
                 currentCallButton.style.color = '';
                 currentCallButton = null;
+            }
+        });
+
+        // Intercept Vapi Live Transcripts and push to Q4 Pipeline
+        vapi.on('message', async (message) => {
+            if (message.type === 'transcript' && message.transcriptType === 'final') {
+                try {
+                    await fetch('/analyze_transcript_direct', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: message.transcript, is_final: true })
+                    });
+                } catch (e) {
+                    console.error("Failed to push transcript to Q4", e);
+                }
             }
         });
     }
