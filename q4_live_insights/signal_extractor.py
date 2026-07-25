@@ -27,7 +27,7 @@ client = genai.Client(api_key=config.GOOGLE_API_KEY)
 class SignalExtractor:
     def __init__(self):
         self.system_prompt = (
-            "You are a real-time call monitoring AI for a health insurance call center. "
+            "You are a real-time call monitoring AI for a general insurance (auto, home, health) call center. "
             "Analyze the latest transcript segment and return a JSON object with any detected signals. "
             "Focus ONLY on: 'missed_cross_sell', 'compliance_gap', 'frustration'. "
             "If none, return empty JSON {}."
