@@ -88,8 +88,10 @@ def chunk_documents(documents: List[Dict[str, Any]]) -> List[KBRecord]:
     all_chunks = []
     for doc in documents:
         # Generate a stable doc_id based on URL or content hash
-        # We'll use content_hash from cleaner if available, else fallback
-        doc_id = doc.get("content_hash", f"doc_{hash(doc['url'])}")
+        # SDE-3: Use deterministic MD5 instead of Python's randomized hash()
+        import hashlib
+        fallback_hash = hashlib.md5(doc["url"].encode()).hexdigest()
+        doc_id = doc.get("content_hash", f"doc_{fallback_hash}")
 
         chunks = chunk_document(
             doc_id=doc_id,

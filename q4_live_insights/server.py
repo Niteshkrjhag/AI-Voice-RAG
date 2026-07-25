@@ -1,5 +1,5 @@
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -27,6 +27,9 @@ app.add_middleware(
 # This list keeps track of all active browser windows connected to our WebSocket.
 # We need this so we can broadcast the live nudges to everyone looking at the dashboard.
 active_connections: list[WebSocket] = []
+
+# SDE-3: Global state lock to prevent concurrent audio streams
+is_streaming = False
 
 @app.websocket("/ws/nudges")
 async def websocket_endpoint(websocket: WebSocket):
@@ -91,30 +94,42 @@ async def get_dashboard():
     return html_path.read_text()
 
 @app.post("/start_stream")
-async def start_stream():
-    """
-    Endpoint triggered by the 'Start Simulated Call' button on the dashboard.
-    It starts the audio stream simulation in the background so the server isn't blocked.
-    """
-    # asyncio.create_task runs the function in the background
-    asyncio.create_task(run_mock_pipeline())
-    return {"status": "Stream started"}
-
-async def run_mock_pipeline():
-    pipeline = AudioStreamPipeline(
-        on_nudge=broadcast_nudge,
-        on_transcript=broadcast_transcript
-    )
+async def start_stream(background_tasks: BackgroundTasks):
+    global is_streaming
     
-    # Path to a mock wav file
-    mock_audio_path = Path(__file__).parent / "test_calls" / "mock_call.wav"
-    
-    if not mock_audio_path.exists():
-        log.warning("mock_audio_missing", path=str(mock_audio_path))
-        await broadcast_nudge("error", f"Missing audio file at {mock_audio_path}. Please create a sample wav file.")
-        return
+    if is_streaming:
+        log.warning("stream_already_running")
+        raise HTTPException(status_code=409, detail="A stream is already running.")
         
-    await pipeline.process_file(str(mock_audio_path))
+    is_streaming = True
+    
+    try:
+        # In a real app, this would be triggered by a Vapi webhook when a call connects.
+        # For the assessment, we simulate it by reading a local file.
+        wav_path = Path(__file__).parent / "test_audio" / "frustrated_customer.wav"
+        
+        if not wav_path.exists():
+            is_streaming = False
+            return {"error": "Test audio file not found. Place a wav file at q4_live_insights/test_audio/frustrated_customer.wav"}
+            
+        pipeline = AudioStreamPipeline(
+            on_nudge=broadcast_nudge,
+            on_transcript=broadcast_transcript
+        )
+        
+        # SDE-3: Wrap the pipeline in a background task that resets the lock when done
+        async def run_pipeline_with_lock():
+            global is_streaming
+            try:
+                await pipeline.process_file(str(wav_path))
+            finally:
+                is_streaming = False
+                
+        background_tasks.add_task(run_pipeline_with_lock)
+        return {"status": "Stream started in background"}
+    except Exception as e:
+        is_streaming = False
+        raise e
 
 if __name__ == "__main__":
     import uvicorn
