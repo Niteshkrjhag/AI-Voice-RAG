@@ -42,9 +42,10 @@ def provision_assistant():
     }
 
     log.info("provisioning_vapi_assistant")
-    response = requests.post(f"{VAPI_BASE_URL}/assistant", headers=headers, json=assistant_config)
+    try:
+        response = requests.post(f"{VAPI_BASE_URL}/assistant", headers=headers, json=assistant_config)
+        response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
 
-    if response.status_code in (200, 201):
         data = response.json()
         assistant_id = data.get("id")
         log.info("vapi_assistant_created", assistant_id=assistant_id)
@@ -54,9 +55,12 @@ def provision_assistant():
         print("1. Start your local KB FastAPI server: `python -m uvicorn q2_knowledge_base.api:app --port 8000`")
         print("2. Ensure ngrok is forwarding to port 8000.")
         print("3. Use this Assistant ID in your Vapi Web SDK to start a call.")
-    else:
-        log.error("vapi_provisioning_failed", status=response.status_code, text=response.text)
-        print(f"❌ Failed to provision assistant: {response.status_code} - {response.text}")
+        
+    except requests.exceptions.RequestException as e:
+        log.error("vapi_provisioning_failed", error=str(e))
+        print(f"❌ Failed to provision assistant. Network error or bad response: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Details: {e.response.text}")
 
 
 if __name__ == "__main__":

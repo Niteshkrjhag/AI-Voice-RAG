@@ -92,9 +92,14 @@ def index_records(records: List[KBRecord]):
             )
         )
 
-    # Upsert points into Qdrant
-    qdrant_client.upsert(
-        collection_name=config.QDRANT_COLLECTION_NAME,
-        points=points
-    )
-    log.info("records_indexed", count=len(points), collection=config.QDRANT_COLLECTION_NAME)
+    try:
+        # Upload the vectors and payloads to Qdrant
+        qdrant_client.upsert(
+            collection_name=config.QDRANT_COLLECTION_NAME,
+            points=points
+        )
+        log.info("records_indexed", collection=config.QDRANT_COLLECTION_NAME, count=len(points))
+    except Exception as e:
+        log.error("qdrant_upsert_failed", error=str(e), collection=config.QDRANT_COLLECTION_NAME)
+        # We don't raise here to allow the pipeline to continue or gracefully exit
+        print(f"❌ Failed to push data to Qdrant vector database: {e}")

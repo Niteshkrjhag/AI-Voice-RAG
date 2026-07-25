@@ -54,24 +54,27 @@ class AudioStreamPipeline:
         if not is_final:
             return
             
-        # Ask Gemini (SignalExtractor) what it thinks about this sentence
-        result = await self.extractor.analyze_transcript(text, self.full_context)
-        signals = result.get("signals", {})
-        
-        # If Gemini didn't find anything interesting, just stop here
-        if not signals:
-            return
+        try:
+            # Ask Gemini (SignalExtractor) what it thinks about this sentence
+            result = await self.extractor.analyze_transcript(text, self.full_context)
+            signals = result.get("signals", {})
             
-        # The NudgeEngine checks if we already showed this exact alert recently (suppression cooldown)
-        nudges = self.nudge_engine.process_signals(signals)
-        
-        # Finally, loop through any valid nudges and send them to the Web Dashboard!
-        for nudge in nudges:
-            await self.on_nudge_callback(
-                nudge_type=nudge.get("type", "alert").lower(),
-                message=nudge.get("message", ""),
-                context={"latency_ms": result.get("latency_ms", 0)}
-            )
+            # If Gemini didn't find anything interesting, just stop here
+            if not signals:
+                return
+                
+            # The NudgeEngine checks if we already showed this exact alert recently (suppression cooldown)
+            nudges = self.nudge_engine.process_signals(signals)
+            
+            # Finally, loop through any valid nudges and send them to the Web Dashboard!
+            for nudge in nudges:
+                await self.on_nudge_callback(
+                    nudge_type=nudge.get("type", "alert").lower(),
+                    message=nudge.get("message", ""),
+                    context={"latency_ms": result.get("latency_ms", 0)}
+                )
+        except Exception as e:
+            log.error("analyze_and_nudge_failed", error=str(e), text=text)
             
     async def process_file(self, wav_path: str):
         """Simulate a real-time stream by reading a wav file in chunks."""
