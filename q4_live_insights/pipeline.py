@@ -82,7 +82,8 @@ class AudioStreamPipeline:
     async def process_file(self, wav_path: str):
         """Simulate a real-time stream by reading a wav file in chunks."""
         self.transcriber = StreamingTranscriber(on_transcript=self._handle_transcript)
-        self.transcriber.connect()
+        # SDE-3: Offload synchronous WebSocket connection to a background thread
+        await asyncio.to_thread(self.transcriber.connect)
         
         log.info("start_simulated_stream", file=wav_path)
         
@@ -103,7 +104,8 @@ class AudioStreamPipeline:
                     if not data:
                         break
                     
-                    self.transcriber.stream_audio(data)
+                    # SDE-3: Offload synchronous streaming to a background thread
+                    await asyncio.to_thread(self.transcriber.stream_audio, data)
                     # Simulate real-time delay (roughly 4096 bytes at 16khz 16-bit mono is ~0.128 seconds)
                     await asyncio.sleep(0.128)
             finally:
