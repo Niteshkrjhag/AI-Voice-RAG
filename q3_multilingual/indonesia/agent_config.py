@@ -17,7 +17,7 @@ def get_indonesia_agent_config(public_api_url: str) -> Dict[str, Any]:
         "firstMessage": INITIAL_MESSAGE_ID,
         "model": {
             "provider": "google",
-            "model": "gemini-2.0-flash",
+            "model": "gemini-3.5-flash", # Multilingual strength
             "messages": [
                 {
                     "role": "system",

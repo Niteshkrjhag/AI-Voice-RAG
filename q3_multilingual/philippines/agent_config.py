@@ -17,7 +17,7 @@ def get_philippines_agent_config(public_api_url: str) -> Dict[str, Any]:
         "firstMessage": INITIAL_MESSAGE_PH,
         "model": {
             "provider": "google",
-            "model": "gemini-2.0-flash", # Multilingual strength
+            "model": "gemini-3.5-flash", # Multilingual strength
             "messages": [
                 {
                     "role": "system",
