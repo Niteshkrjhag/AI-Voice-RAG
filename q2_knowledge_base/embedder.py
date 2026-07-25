@@ -73,33 +73,41 @@ def index_records(records: List[KBRecord]):
 
     # Ensure collection exists before inserting
     init_qdrant_collection()
-
-    # Extract texts for embedding
-    texts = [record.content for record in records]
-    embeddings = generate_embeddings(texts)
-
-    # Prepare Qdrant point structures
-    points = []
-    for record, vector in zip(records, embeddings):
-        # Qdrant expects payload to be a dict, so we dump the Pydantic model
-        payload = record.model_dump(mode='json')
-
-        points.append(
-            models.PointStruct(
-                id=record.record_id,  # Ensure UUID or stable string hash
-                vector=vector,
-                payload=payload
+    
+    BATCH_SIZE = 32
+    
+    # SDE-3: Process in batches to prevent Out-Of-Memory (OOM) crashes on large doc sets
+    for i in range(0, len(records), BATCH_SIZE):
+        batch = records[i:i + BATCH_SIZE]
+        
+        # Extract texts for embedding
+        texts = [record.content for record in batch]
+        embeddings = generate_embeddings(texts)
+    
+        # Prepare Qdrant point structures
+        points = []
+        for record, vector in zip(batch, embeddings):
+            # Qdrant expects payload to be a dict, so we dump the Pydantic model
+            payload = record.model_dump(mode='json')
+    
+            points.append(
+                models.PointStruct(
+                    id=record.record_id,  # Ensure UUID or stable string hash
+                    vector=vector,
+                    payload=payload
+                )
             )
-        )
-
-    try:
-        # Upload the vectors and payloads to Qdrant
-        qdrant_client.upsert(
-            collection_name=config.QDRANT_COLLECTION_NAME,
-            points=points
-        )
-        log.info("records_indexed", collection=config.QDRANT_COLLECTION_NAME, count=len(points))
-    except Exception as e:
-        log.error("qdrant_upsert_failed", error=str(e), collection=config.QDRANT_COLLECTION_NAME)
-        # We don't raise here to allow the pipeline to continue or gracefully exit
-        print(f"❌ Failed to push data to Qdrant vector database: {e}")
+    
+        try:
+            # Upload the vectors and payloads to Qdrant
+            qdrant_client.upsert(
+                collection_name=config.QDRANT_COLLECTION_NAME,
+                points=points
+            )
+            log.info("batch_indexed", collection=config.QDRANT_COLLECTION_NAME, size=len(points))
+        except Exception as e:
+            log.error("qdrant_batch_upsert_failed", error=str(e), collection=config.QDRANT_COLLECTION_NAME)
+            # We don't raise here to allow the pipeline to continue or gracefully exit
+            print(f"❌ Failed to push batch to Qdrant: {e}")
+            
+    log.info("all_records_indexed", total=len(records))

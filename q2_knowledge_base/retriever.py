@@ -33,12 +33,13 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
         log.error("query_embedding_failed", query=query, error=str(e))
         return []
 
-    # 2. Search Qdrant
+    # 2. Search Qdrant with a minimum semantic relevance score
     try:
         search_results = qdrant_client.query_points(
             collection_name=config.QDRANT_COLLECTION_NAME,
             query=query_vector,
             limit=limit,
+            score_threshold=0.3  # SDE-3: Reject completely irrelevant out-of-scope matches
         ).points
     except Exception as e:
         log.error("qdrant_search_failed", query=query, error=str(e))

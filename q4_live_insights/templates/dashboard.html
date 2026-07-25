@@ -112,39 +112,67 @@
     </div>
 
     <script>
-        const ws = new WebSocket(`ws://${window.location.host}/ws/nudges`);
         const transcriptBox = document.getElementById('transcript-box');
         const nudgesContainer = document.getElementById('nudges-container');
         const emptyState = document.getElementById('empty-state');
         
         let finalTranscript = "";
+        let ws;
+        let reconnectAttempts = 0;
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws/nudges`);
             
-            if (data.type === "transcript") {
-                if (data.is_final) {
-                    finalTranscript += data.text + " ";
-                    transcriptBox.innerHTML = finalTranscript;
+            ws.onopen = () => {
+                console.log("WebSocket connected");
+                reconnectAttempts = 0; // Reset on successful connect
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === "transcript") {
+                    if (data.is_final) {
+                        finalTranscript += data.text + " ";
+                        transcriptBox.innerHTML = finalTranscript;
+                    } else {
+                        transcriptBox.innerHTML = finalTranscript + `<span class="partial-text">${data.text}</span>`;
+                    }
+                    transcriptBox.scrollTop = transcriptBox.scrollHeight;
                 } else {
-                    transcriptBox.innerHTML = finalTranscript + `<span class="partial-text">${data.text}</span>`;
+                    // It's a nudge
+                    if (emptyState) emptyState.remove();
+                    
+                    const card = document.createElement('div');
+                    card.className = `nudge-card ${data.type}`;
+                    card.innerHTML = `
+                        <div class="nudge-title">${data.type.replace('_', ' ')} Alert</div>
+                        <div class="nudge-message">${data.message}</div>
+                        ${Object.keys(data.context).length > 0 ? `<div class="nudge-context">${JSON.stringify(data.context)}</div>` : ''}
+                    `;
+                    
+                    nudgesContainer.prepend(card); // Add to top
                 }
-                transcriptBox.scrollTop = transcriptBox.scrollHeight;
-            } else {
-                // It's a nudge
-                if (emptyState) emptyState.remove();
-                
-                const card = document.createElement('div');
-                card.className = `nudge-card ${data.type}`;
-                card.innerHTML = `
-                    <div class="nudge-title">${data.type.replace('_', ' ')} Alert</div>
-                    <div class="nudge-message">${data.message}</div>
-                    ${Object.keys(data.context).length > 0 ? `<div class="nudge-context">${JSON.stringify(data.context)}</div>` : ''}
-                `;
-                
-                nudgesContainer.prepend(card); // Add to top
-            }
-        };
+            };
+
+            // SDE-3: Robust WebSocket Reconnection (Exponential Backoff)
+            ws.onclose = (e) => {
+                console.warn(`WebSocket closed. Reconnecting... Attempt ${reconnectAttempts + 1}`);
+                let timeout = Math.min(1000 * (2 ** reconnectAttempts), 30000); // Max 30s
+                setTimeout(() => {
+                    reconnectAttempts++;
+                    connectWebSocket();
+                }, timeout);
+            };
+            
+            ws.onerror = (err) => {
+                console.error("WebSocket encountered error: ", err, "Closing socket");
+                ws.close(); // Forces onclose to trigger reconnection
+            };
+        }
+
+        // Initialize the connection
+        connectWebSocket();
 
         async function startStream() {
             transcriptBox.innerHTML = "<em>Starting stream...</em><br>";
