@@ -32,6 +32,6 @@ def get_philippines_agent_config(public_api_url: str) -> Dict[str, Any]:
         },
         "transcriber": {
             "provider": "assembly-ai",
-            "language": "tl" # Tagalog ASR
+            "language": "multi" # Use 'multi' for Tagalog ASR per Vapi schema
         }
     }

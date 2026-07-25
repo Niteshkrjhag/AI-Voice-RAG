@@ -32,6 +32,6 @@ def get_indonesia_agent_config(public_api_url: str) -> Dict[str, Any]:
         },
         "transcriber": {
             "provider": "assembly-ai",
-            "language": "id" # Bahasa Indonesia ASR
+            "language": "multi" # Use 'multi' for Bahasa Indonesia ASR per Vapi schema
         }
     }
