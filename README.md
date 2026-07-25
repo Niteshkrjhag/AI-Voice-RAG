@@ -1,26 +1,26 @@
 # 🚀 Production Voice AI & RAG Architecture (2026 Assessment)
 
-Welcome! This repository contains a full-stack, enterprise-ready Voice AI architecture, engineered for the 2026 AI Engineer Assessment.
+Welcome! This repository contains a full-stack, enterprise-ready Voice AI architecture, engineered from scratch for the 2026 AI Engineer Assessment.
 
-Whether you are a Junior Developer (SDE-1) or a Principal Engineer reviewing system design, this guide explains exactly **what** the project does, **how** it is structured, the **advanced engineering challenges** we conquered, and how to run it.
-
----
-
-## 📖 Executive Summary
-
-We built a real-time AI Voice Assistant for a Health Insurance company. 
-
-Instead of waiting on hold, customers talk to an AI agent that can instantly retrieve exact policy details and gracefully handle frustrated callers. The system is split into four primary pillars:
-1. **The Voice Agent (Vapi):** Handles the telephony and conversation flow.
-2. **The Knowledge Base (RAG):** A Qdrant vector database filled with scraped and cleaned policy documents.
-3. **Multilingual Routing:** Separate agent configurations for the Philippines (Taglish) and Indonesia (Bahasa), fully connected to the knowledge base.
-4. **Live Insights Pipeline:** A background WebSocket server that streams audio to AssemblyAI and uses Gemini to detect customer frustration, popping up real-time UI nudges for human supervisors.
+This README is designed to explain **everything we built, how it works, and why we made our technical decisions**, written simply enough for an SD-1 to grasp the flow, but with enough technical depth for an SD-3 to appreciate the architecture.
 
 ---
 
-## 🏗 System Architecture & Flow Diagram
+## 📖 What We Built
 
-Here is a high-level overview of how data flows through the system during an active phone call:
+We built a real-time AI Voice Assistant system that can talk to customers over the phone or web. Instead of following a rigid script, it uses **RAG (Retrieval-Augmented Generation)** to look up actual company policies instantly. We also built a system to listen in on calls and send real-time alerts (Nudges) to human supervisors if a customer gets frustrated.
+
+The project is divided into four main parts:
+1. **The Voice Agent (Question 1):** A web-calling interface powered by Vapi that talks to users about Health Insurance.
+2. **The Knowledge Base (Question 2):** A vector database (Qdrant) filled with scraped, cleaned, and embedded policy documents. The voice agent searches this database instantly when a user asks a complex question.
+3. **Multilingual Routing (Question 3):** Localized voice agents specifically tuned for the Philippines (Taglish) and Indonesia (Bahasa), complete with regional terminology and custom system prompts.
+4. **Live Insights Pipeline (Question 4):** A real-time background server that listens to audio streams, transcribes them using AssemblyAI, and uses Gemini 3.5 Flash to detect compliance risks, missed sales opportunities, and frustration—alerting the dashboard instantly with End-to-End latency tracking.
+
+---
+
+## 🏗 System Architecture & Flow
+
+Here is a high-level view of how data flows through the system during an active call:
 
 ```mermaid
 graph TD
@@ -50,7 +50,7 @@ graph TD
     Vapi -.->|Audio Fork| StreamServer[🎧 FastAPI Stream Server]
     StreamServer -->|WebSocket| AAI[🎙️ AssemblyAI ASR]
     AAI -->|Live Transcripts| StreamServer
-    StreamServer -->|Extract Signals| Gemini[🧠 Gemini 2.0 Flash]
+    StreamServer -->|Extract Signals| Gemini[🧠 Gemini 3.5 Flash]
     Gemini -->|Frustration/Sales| Nudge[🚨 Nudge Engine]
     Nudge -->|WebSocket Push| Dashboard[💻 Web UI Dashboard]
     
@@ -65,10 +65,10 @@ graph TD
 
 ## 🛠 How to Set Up and Run the Code
 
-Follow these steps to bootstrap the project on your local machine.
+Follow these exact steps to start the entire system on your local machine.
 
 ### 1. Installation
-Create a Python virtual environment and install dependencies:
+Create a Python virtual environment and install the required dependencies:
 ```bash
 python3 -m venv venv
 source venv/bin/activate
@@ -76,106 +76,100 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configuration (`.env`)
-Copy `.env.example` to `.env` and fill in your actual API keys. 
-> **Note:** The server enforces strict validation on startup. If you do not provide `RAG_API_KEY`, the server will refuse to boot to prevent silent production crashes.
+Copy `.env.example` to `.env` and fill in your actual API keys (Vapi, Gemini, Qdrant, etc.). 
 ```bash
 cp .env.example .env
 ```
+> **SD-3 Detail:** The backend features a fast-fail configuration validator (`shared/config.py`). If you forget critical keys, the server refuses to boot, preventing silent crashes later.
 
 ### 3. Build the Knowledge Base (Q2)
-Scrape the fake insurance websites, clean the data, generate embeddings locally, and index them into Qdrant:
+Scrape the fake insurance websites, clean out bad HTML data, generate embeddings locally, and push them into the Qdrant database:
 ```bash
 python -m q2_knowledge_base.pipeline
 ```
 
-### 4. Start the RAG Backend API
-Start the FastAPI server that Vapi will call to search the knowledge base:
+### 4. Start the Unified Server (Q1, Q2, Q4 Dashboard)
+We unified all our APIs (RAG Search, Live Insights, and Web Dashboard) into a single FastAPI application. Start it:
 ```bash
-python -m uvicorn q2_knowledge_base.api:app --port 8000
+python server.py
 ```
-Use `ngrok` to expose this port to the internet (`ngrok http 8000`), then export the URL:
+*The server is now running on `http://localhost:8080`.*
+
+### 5. Expose Your Server to the Internet
+Because Vapi (the voice platform) lives in the cloud, it needs a public URL to talk to your local laptop to access the Knowledge Base.
 ```bash
+# In a new terminal window:
+ngrok http 8080
 export NGROK_URL=https://your-ngrok-url.ngrok.app
 ```
 
-### 5. Provision the Voice Agents (Q1 & Q3)
-Automatically deploy your Voice Agents to the Vapi cloud. This script is idempotent—running it twice will patch the existing bot rather than creating a duplicate.
+### 6. Provision the Voice Agents (Q1 & Q3)
+Run our provisioning scripts to automatically create the Voice Agents in your Vapi account. These scripts configure the LLMs (Gemini 3.5 Flash), the custom tools, and the prompts.
 ```bash
-# Provision the English Bot
+# Provision the English Bot (Q1)
 python -m q1_voice_agent.provision
 
-# Provision the Multilingual Bots
+# Provision the Multilingual Bots (Q3)
 python -m q3_multilingual.provision ph   # Philippines (Taglish)
 python -m q3_multilingual.provision id   # Indonesia (Bahasa)
 ```
+> **SD-2 Detail:** These scripts are **idempotent**. If you run them twice, they `PATCH` (update) the existing bot instead of creating duplicates.
 
-### 6. Start the Live Insights Dashboard (Q4)
-Run the real-time background WebSocket server:
-```bash
-python q4_live_insights/server.py
-```
-Open `http://localhost:8080` in your browser and click **Start Simulated Call** to watch live AI nudges populate.
-
----
-
-## 🛡️ Problems Faced & Engineering Solutions (SDE-3 Deep Dive)
-
-While building this architecture, we ran into severe distributed-systems and concurrency challenges. Here is how we solved them to achieve Enterprise Grade stability:
-
-### 1. Vector Database Duplication (Idempotency)
-* **The Problem:** Python's built-in `hash()` function uses a randomized seed per process. When generating chunk IDs for Qdrant, a new UUID was created every time the pipeline ran, causing massive vector duplication.
-* **The Solution:** We replaced `hash()` with deterministic MD5 hashing (`hashlib.md5(doc['url'].encode()).hexdigest()`), ensuring Qdrant safely overwrites existing documents instead of duplicating them.
-
-### 2. FastAPI Event Loop Freezing (Concurrency)
-* **The Problem:** In our RAG API, generating local sentence embeddings (CPU-bound) and querying Qdrant (Network-bound) blocked the entire Python AsyncIO event loop, causing `504 Gateway Timeouts` when multiple phone calls queried the database simultaneously.
-* **The Solution:** We wrapped all synchronous bottlenecks in `await asyncio.to_thread()`, pushing the heavy lifting to OS background threads and keeping the FastAPI web server completely non-blocking.
-
-### 3. Unbounded AI Memory Leaks (State Management)
-* **The Problem:** In the Live Insights pipeline, appending every spoken word to a single `full_context` string over a 45-minute phone call caused Gemini API context-window exhaustion and exponential token costs.
-* **The Solution:** We implemented a sliding memory window, truncating the context strictly to the last 4,000 characters. The LLM retains immediate context without leaking memory.
-
-### 4. Background Webhook DDoS (Rate Limiting)
-* **The Problem:** Clicking "Start Simulated Call" in the dashboard multiple times launched parallel background tasks processing the exact same audio stream, spamming the UI and instantly triggering Gemini `429 Rate Limits`.
-* **The Solution:** We implemented a global `is_streaming` state lock on the FastAPI endpoint to reject overlapping requests with a `409 Conflict`.
-
-### 5. Silent InfoSec and Configuration Failures
-* **The Problem:** Vapi Custom Tools originally hardcoded the `X-API-Key` directly in the source code. Furthermore, missing `.env` keys caused silent runtime crashes deep in the application.
-* **The Solution:** We injected `RAG_API_KEY` directly from the environment into the tool payload. We also added a fast-fail `validate()` method to `shared/config.py` that immediately crashes the application on boot if security keys are missing.
-
-### 6. RAG Hallucinations & Multilingual Disconnection
-* **The Problem:** 
-    1. Qdrant returned slightly relevant documents for completely unrelated questions (e.g. "car loans"), causing the bot to hallucinate.
-    2. The multilingual bots were missing the Vapi `tools` array entirely, disconnecting them from the RAG database.
-* **The Solution:** We enforced a strict `score_threshold=0.3` in the Qdrant retrieval layer to instantly reject low-confidence matches. We then refactored the Q3 config schemas to dynamically inject the Custom Tool schema, allowing Taglish and Bahasa speakers to successfully execute vector database queries.
+### 7. Test it Out!
+Open `http://localhost:8080` in your web browser. 
+- You can search the knowledge base directly in the UI.
+- You can click the **Start Call** buttons to talk to the Voice Agents through your computer's microphone.
+- You can click **Start Simulated Call** on the Live Insights tab to watch the real-time AI nudges appear!
 
 ---
 
-## 📂 Project Structure
+## 🧠 Our Technical Approach & Challenges Solved
+
+### Question 1: Knowledge-Grounded Voice Agent
+**Approach:** We chose Vapi as our Voice Platform and Gemini 3.5 Flash as our LLM. To ground the agent, we used **Function Calling (Custom Tools)**. When a user asks a hard question, the LLM pauses, makes an API request to our local FastAPI server (`/q2/api/v1/search`), reads the exact policy chunk returned by Qdrant, and synthesizes an accurate answer.
+**Challenge Solved:** Initially, the LLM hallucinated answers if the knowledge base returned irrelevant documents. We fixed this by enforcing a strict `score_threshold=0.3` in the Qdrant retrieval layer to block low-confidence vectors.
+
+### Question 2: Production-Ready Knowledge Base
+**Approach:** We built a data pipeline (`scraper -> cleaner -> chunker -> embedder`). We used `SentenceTransformers` to generate embeddings locally to save API costs.
+**Challenge Solved (Idempotency):** Python's `hash()` function is randomized per run. When generating chunk IDs for Qdrant, we were creating a new UUID every time the pipeline ran, causing massive vector duplication. We solved this by using deterministic MD5 hashing (`hashlib.md5(text.encode())`), ensuring Qdrant safely overwrites updates instead of duplicating data.
+
+### Question 3: Native-Language Voice Bots
+**Approach:** We provisioned two separate agents for the Philippines (Taglish) and Indonesia (Bahasa). 
+**Challenge Solved:** Legacy speech-to-text models fail at "code-switching" (e.g., mixing Tagalog and English loanwords like "lapse" or "premium" in the same sentence). We solved this by explicitly configuring the Vapi transcriber to use the `multi` language model setting, which natively supports rapid code-switching without literal translations.
+
+### Question 4: Live Insights and Nudges
+**Approach:** We built a background Python pipeline that takes live audio, streams it to AssemblyAI for real-time transcription, and pushes completed sentences to Gemini 3.5 Flash to extract JSON signals (`missed_cross_sell`, `compliance_gap`, `frustration`). It then pushes UI nudges to the web dashboard via WebSockets.
+**Challenges Solved:**
+1. **Concurrency Event Loop Freezing:** Sending audio chunks over WebSockets while waiting for LLM network requests blocked the Python `asyncio` event loop. We solved this by wrapping blocking calls in `asyncio.to_thread()`, keeping the stream fast and responsive.
+2. **Context Window Exhaustion:** Passing the entire transcript to Gemini over a 45-minute call would exhaust the token limit and cause a memory leak. We solved this with a sliding text window, strictly truncating `full_context` to the last 4,000 characters.
+3. **Duplicate Nudge Spam:** If a user sounded angry for 3 sentences, it spawned 3 alerts. We built a `NudgeEngine` with a 15-second `suppression_window_ms` (cooldown) to filter out duplicate topics.
+4. **End-to-End Latency Tracking:** We capture a precise timestamp when the transcript string finishes, measure the LLM extraction time, and finally compute total `E2E_ms` (End-To-End) right before pushing the WebSocket payload, displaying the speed dynamically on the UI dashboard card.
+
+---
+
+## 📂 Codebase Structure
 
 ```text
-├── .env.example             # Environment variable template
-├── requirements.txt         # Pinned Python dependencies
 ├── shared/                  
-│   ├── config.py            # Centralized configuration with fast-fail validation
-│   └── logger.py            # JSON structured logging (structlog)
+│   ├── config.py            # Centralized environment configs with fast-fail validation
+│   └── logger.py            # JSON structured logging
 ├── q1_voice_agent/          
-│   ├── provision.py         # Idempotent Vapi deployment script
-│   ├── system_prompt.py     # Base rules & Prompt Injection defenses
-│   └── tools.py             # JSON Schema for FastAPI Custom Tools
+│   ├── provision.py         # Idempotent Vapi API deployment
+│   ├── system_prompt.py     # Base rules & behavior guidelines
+│   └── tools.py             # JSON Schema for the Knowledge Base Custom Tool
 ├── q2_knowledge_base/       
-│   ├── scraper.py           # Async Crawl4AI ingestion
-│   ├── cleaner.py           # PII redaction and boilerplate removal
-│   ├── chunker.py           # Semantic chunking with deterministic UUIDs
-│   ├── embedder.py          # Generator batching (OOM proof) SentenceTransformers
+│   ├── pipeline.py          # Master script combining crawling, cleaning, and embedding
 │   └── api.py               # Secure FastAPI Retrieval Endpoint
 ├── q3_multilingual/         
-│   ├── provision.py         # CLI deployment router for regions
-│   ├── philippines/         # Taglish Agent config and prompts
-│   └── indonesia/           # Bahasa Agent config and prompts
-└── q4_live_insights/        
-    ├── server.py            # Concurrency-locked WebSocket Server
-    ├── pipeline.py          # AssemblyAI and Gemini Orchestrator
-    ├── signal_extractor.py  # LLM prompt wrapper with backoff retries
-    ├── nudge_engine.py      # Cooldown and suppression logic
-    └── templates/dashboard.html # Auto-reconnecting frontend UI
+│   ├── provision.py         # Deployment router for specific language bots
+│   ├── philippines/         # Taglish agent setup
+│   └── indonesia/           # Bahasa agent setup
+├── q4_live_insights/        
+│   ├── server.py            # Concurrency-locked WebSocket Server
+│   ├── pipeline.py          # Real-time orchestration (Transcriber -> Signal -> Nudge)
+│   ├── signal_extractor.py  # Gemini LLM JSON extraction with API backoff retries
+│   ├── nudge_engine.py      # Duplicate suppression and cooldown logic
+│   └── templates/dashboard.html # Auto-reconnecting frontend UI
+├── web/                     # Frontend UI (HTML/CSS/JS)
+└── server.py                # The Unified Global Application Bootstrapper
 ```
