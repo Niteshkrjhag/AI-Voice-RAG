@@ -161,7 +161,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // --- Vapi Voice SDK (Q1, Q3) ---
-    const vapi = new window.Vapi("39834d71-c855-4eeb-a434-c077c4856e24");
+    let vapi = null;
+    try {
+        vapi = new Vapi("39834d71-c855-4eeb-a434-c077c4856e24");
+        console.log("Vapi SDK initialized successfully.");
+    } catch (e) {
+        console.error("Failed to initialize Vapi SDK:", e);
+        alert("Failed to load Vapi Web SDK. Check your internet connection or browser console for errors.");
+    }
     
     const ASSISTANTS = {
         q1: '05d2ae77-a71f-431d-9b73-1eb908f4f3d9',
@@ -173,13 +180,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let originalButtonText = "";
 
     // Vapi Event Listeners
-    vapi.on('call-start', () => {
-        if (currentCallButton) {
-            currentCallButton.textContent = '🔴 End Call';
-            currentCallButton.style.backgroundColor = '#ef4444'; // Red
-            currentCallButton.style.color = '#fff';
-        }
-    });
+    if (vapi) {
+        vapi.on('call-start', () => {
+            if (currentCallButton) {
+                currentCallButton.textContent = '🔴 End Call';
+                currentCallButton.style.backgroundColor = '#ef4444'; // Red
+                currentCallButton.style.color = '#fff';
+            }
+        });
 
     vapi.on('call-end', () => {
         if (currentCallButton) {
@@ -190,15 +198,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    vapi.on('error', (e) => {
-        console.error("Vapi Error:", e);
-        if (currentCallButton) {
-            currentCallButton.textContent = originalButtonText;
-            currentCallButton.style.backgroundColor = '';
-            currentCallButton.style.color = '';
-            currentCallButton = null;
-        }
-    });
+        vapi.on('error', (e) => {
+            console.error("Vapi Error:", e);
+            if (currentCallButton) {
+                currentCallButton.textContent = originalButtonText;
+                currentCallButton.style.backgroundColor = '';
+                currentCallButton.style.color = '';
+                currentCallButton = null;
+            }
+        });
+    }
 
     // Button Handlers
     function setupCallButton(buttonId, assistantId) {
@@ -206,6 +215,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!btn) return;
         
         btn.addEventListener('click', () => {
+            if (!vapi) {
+                alert("Vapi SDK is not loaded. Cannot start call. Ensure the CDN script is not blocked.");
+                return;
+            }
             if (currentCallButton === btn) {
                 // If it's already running on this button, end it
                 vapi.stop();
