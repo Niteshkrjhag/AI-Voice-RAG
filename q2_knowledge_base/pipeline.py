@@ -64,7 +64,7 @@ async def run_pipeline():
     records = chunk_documents(unique_docs)
     
     # 5. Embed and Index
-    await index_records(records)
+    index_records(records)
     
     log.info("kb_pipeline_completed", total_records_indexed=len(records))
 

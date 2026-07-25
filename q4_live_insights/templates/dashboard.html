@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Insights Dashboard</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        h1, h2 {
+            margin-top: 0;
+            color: #38bdf8;
+        }
+        .panel {
+            background-color: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #transcript-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        #nudges-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .nudge-card {
+            background: #334155;
+            border-left: 4px solid #38bdf8;
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            animation: slideIn 0.3s ease-out;
+        }
+        .nudge-card.cross_sell { border-color: #10b981; } /* Green */
+        .nudge-card.compliance { border-color: #f59e0b; } /* Yellow */
+        .nudge-card.frustration { border-color: #ef4444; } /* Red */
+        
+        .nudge-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            text-transform: capitalize;
+        }
+        .nudge-message {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+        .nudge-context {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+            font-family: monospace;
+        }
+        button {
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 1rem;
+        }
+        button:hover {
+            background: #0ea5e9;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .partial-text {
+            color: #94a3b8;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <div>
+            <h2>Live Call Transcript</h2>
+            <button onclick="startStream()">Start Simulated Call</button>
+        </div>
+        <div id="transcript-box"></div>
+    </div>
+    <div class="panel">
+        <h2>Agent Nudges & Alerts</h2>
+        <div id="nudges-container">
+            <div style="color: #94a3b8; font-style: italic;" id="empty-state">Waiting for signals...</div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}/ws/nudges`);
+        const transcriptBox = document.getElementById('transcript-box');
+        const nudgesContainer = document.getElementById('nudges-container');
+        const emptyState = document.getElementById('empty-state');
+        
+        let finalTranscript = "";
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === "transcript") {
+                if (data.is_final) {
+                    finalTranscript += data.text + " ";
+                    transcriptBox.innerHTML = finalTranscript;
+                } else {
+                    transcriptBox.innerHTML = finalTranscript + `<span class="partial-text">${data.text}</span>`;
+                }
+                transcriptBox.scrollTop = transcriptBox.scrollHeight;
+            } else {
+                // It's a nudge
+                if (emptyState) emptyState.remove();
+                
+                const card = document.createElement('div');
+                card.className = `nudge-card ${data.type}`;
+                card.innerHTML = `
+                    <div class="nudge-title">${data.type.replace('_', ' ')} Alert</div>
+                    <div class="nudge-message">${data.message}</div>
+                    ${Object.keys(data.context).length > 0 ? `<div class="nudge-context">${JSON.stringify(data.context)}</div>` : ''}
+                `;
+                
+                nudgesContainer.prepend(card); // Add to top
+            }
+        };
+
+        async function startStream() {
+            transcriptBox.innerHTML = "<em>Starting stream...</em><br>";
+            finalTranscript = "";
+            nudgesContainer.innerHTML = "";
+            try {
+                await fetch('/start_stream', { method: 'POST' });
+            } catch (err) {
+                alert("Failed to start stream: " + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

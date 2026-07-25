@@ -6,36 +6,36 @@ Conforms to the 2026 qdrant-client v1.18.0 API.
 """
 
 from typing import List
-from openai import AsyncOpenAI
+
 from qdrant_client import QdrantClient, models
 
 from shared.config import config
 from shared.logger import get_logger
 from q2_knowledge_base.schema import KBRecord
 
+from sentence_transformers import SentenceTransformer
+
 log = get_logger("q2.embedder")
 
 # Initialize clients using centralized config
-openai_client = AsyncOpenAI(api_key=config.OPENAI_API_KEY)
+# Load the local sentence-transformer model in memory
+embedding_model = SentenceTransformer(config.EMBEDDING_MODEL)
 qdrant_client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
 
 
-async def generate_embeddings(texts: List[str]) -> List[List[float]]:
+def generate_embeddings(texts: List[str]) -> List[List[float]]:
     """
-    Generate dense vector representations using OpenAI's embedding model.
+    Generate dense vector representations using the local SentenceTransformers model.
     """
     if not texts:
         return []
 
     try:
-        response = await openai_client.embeddings.create(
-            input=texts,
-            model=config.EMBEDDING_MODEL,
-        )
-        # Extract the embeddings from the response in order
-        embeddings = [data.embedding for data in sorted(response.data, key=lambda x: x.index)]
-        log.debug("embeddings_generated", count=len(embeddings))
-        return embeddings
+        # encode() returns a numpy array, we convert to list of floats for Qdrant
+        embeddings = embedding_model.encode(texts, show_progress_bar=False)
+        embeddings_list = [vector.tolist() for vector in embeddings]
+        log.debug("embeddings_generated", count=len(embeddings_list))
+        return embeddings_list
     except Exception as e:
         log.error("embedding_generation_failed", error=str(e))
         raise
@@ -44,7 +44,7 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
 def init_qdrant_collection():
     """
     Initialize the Qdrant collection if it doesn't exist.
-    Configured for OpenAI's text-embedding-3-small (1536 dimensions).
+    Configured for the configured dimension size (e.g. 384 for all-MiniLM-L6-v2).
     """
     collection_name = config.QDRANT_COLLECTION_NAME
 
@@ -53,7 +53,7 @@ def init_qdrant_collection():
         qdrant_client.create_collection(
             collection_name=collection_name,
             vectors_config=models.VectorParams(
-                size=1536,  # Specific to text-embedding-3-small
+                size=config.EMBEDDING_DIMENSIONS,
                 distance=models.Distance.COSINE
             ),
         )
@@ -61,7 +61,7 @@ def init_qdrant_collection():
         log.debug("qdrant_collection_exists", collection=collection_name)
 
 
-async def index_records(records: List[KBRecord]):
+def index_records(records: List[KBRecord]):
     """
     Generate embeddings for records and index them into Qdrant.
 
@@ -76,7 +76,7 @@ async def index_records(records: List[KBRecord]):
 
     # Extract texts for embedding
     texts = [record.content for record in records]
-    embeddings = await generate_embeddings(texts)
+    embeddings = generate_embeddings(texts)
 
     # Prepare Qdrant point structures
     points = []
@@ -86,7 +86,7 @@ async def index_records(records: List[KBRecord]):
 
         points.append(
             models.PointStruct(
-                id=record.id,  # Ensure UUID or stable string hash
+                id=record.record_id,  # Ensure UUID or stable string hash
                 vector=vector,
                 payload=payload
             )

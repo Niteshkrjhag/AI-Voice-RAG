@@ -7,6 +7,7 @@ use: from shared.logger import get_logger
 """
 
 import sys
+import logging
 import structlog
 from shared.config import config
 
@@ -34,12 +35,11 @@ def _configure_structlog() -> None:
         # ── Prod: structured JSON for log pipelines ─────────────
         renderer = structlog.processors.JSONRenderer()
 
+    level = getattr(logging, config.LOG_LEVEL.upper(), logging.INFO)
+
     structlog.configure(
         processors=shared_processors + [renderer],
-        wrapper_class=structlog.make_filtering_bound_logger(
-            # Convert LOG_LEVEL string ("INFO") to numeric level
-            structlog.get_level_from_name(config.LOG_LEVEL.lower())
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
         cache_logger_on_first_use=True,

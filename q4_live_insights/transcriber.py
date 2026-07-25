@@ -32,29 +32,30 @@ class StreamingTranscriber:
         self._loop = asyncio.get_running_loop()
         self.chunk_start_times = {}  # Tracks latency per chunk
         
-    def _on_open(self, session_opened: aai.RealtimeSessionOpened):
-        log.info("asr_session_opened", session_id=session_opened.session_id)
+    def _on_open(self, session_opened):
+        log.info("asr_session_opened", session_id=getattr(session_opened, "session_id", "unknown"))
 
-    def _on_data(self, transcript: aai.RealtimeTranscript):
-        if not transcript.text:
+    def _on_data(self, transcript):
+        if not getattr(transcript, "text", None):
             return
             
         # Calculate latency
         received_time = time.time()
-        # In a real streaming scenario, we'd track the exact audio chunk timestamp.
-        # For simplicity, we just log the time it took for the ASR to return the partial/final result.
         
-        if isinstance(transcript, aai.RealtimeFinalTranscript):
+        # Check if it's a final transcript
+        # Sometimes it's isinstance(transcript, aai.RealtimeFinalTranscript), sometimes it has a message_type attribute.
+        # Let's use a safe check.
+        is_final = getattr(transcript, "message_type", "") == "FinalTranscript" or "Final" in type(transcript).__name__
+        
+        if is_final:
             log.info("asr_final_transcript", text=transcript.text)
             if self.on_transcript:
-                # Schedule the callback in the asyncio event loop since aai callbacks run in a thread
                 self._loop.call_soon_threadsafe(self.on_transcript, transcript.text, True, received_time)
         else:
-            # Partial transcript
             if self.on_transcript:
                 self._loop.call_soon_threadsafe(self.on_transcript, transcript.text, False, received_time)
 
-    def _on_error(self, error: aai.RealtimeError):
+    def _on_error(self, error):
         log.error("asr_error", error=str(error))
 
     def _on_close(self):

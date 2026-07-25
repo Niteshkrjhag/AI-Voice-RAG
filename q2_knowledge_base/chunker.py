@@ -9,7 +9,7 @@ from typing import List, Dict, Any
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from shared.logger import get_logger
-from q2_knowledge_base.schema import KBRecord, ChunkMetadata
+from q2_knowledge_base.schema import KBRecord
 
 log = get_logger("q2.chunker")
 
@@ -48,24 +48,26 @@ def chunk_document(
     chunks_text = splitter.split_text(content)
     kb_records = []
 
+    import uuid
     for i, text in enumerate(chunks_text):
         # Create a unique ID for the chunk for precise vector db tracking
-        chunk_id = f"{doc_id}_chunk_{i}"
+        # Qdrant strictly requires UUID format (e.g. string of 32 hex chars with or without hyphens)
+        # We generate a deterministic UUID based on the doc_id and chunk index
+        import hashlib
+        hash_str = hashlib.md5(f"{doc_id}_chunk_{i}".encode()).hexdigest()
+        record_id = str(uuid.UUID(hash_str))
 
-        # Build schema-compliant metadata
-        metadata = ChunkMetadata(
-            source_url=source_url,
-            doc_id=doc_id,
-            chunk_index=i,
-            total_chunks=len(chunks_text),
-            has_pii=pii_flags,
-        )
-
+        # Build schema-compliant record
         record = KBRecord(
-            id=chunk_id,
+            record_id=record_id,
             title=title,
             content=text,
-            metadata=metadata,
+            category="health_insurance", # Default category
+            source=f"scraped/{doc_id}",
+            source_url=source_url,
+            pii_detected=pii_flags,
+            chunk_index=i,
+            parent_doc_id=doc_id,
         )
         kb_records.append(record)
 

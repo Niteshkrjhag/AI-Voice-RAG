@@ -27,7 +27,7 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
     """
     # 1. Embed the search query
     try:
-        query_embeddings = await generate_embeddings([query])
+        query_embeddings = generate_embeddings([query])
         query_vector = query_embeddings[0]
     except Exception as e:
         log.error("query_embedding_failed", query=query, error=str(e))
@@ -35,11 +35,11 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
 
     # 2. Search Qdrant
     try:
-        search_results = qdrant_client.search(
+        search_results = qdrant_client.query_points(
             collection_name=config.QDRANT_COLLECTION_NAME,
-            query_vector=query_vector,
+            query=query_vector,
             limit=limit,
-        )
+        ).points
     except Exception as e:
         log.error("qdrant_search_failed", query=query, error=str(e))
         return []

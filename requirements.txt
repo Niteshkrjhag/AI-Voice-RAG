@@ -10,7 +10,8 @@ pydantic>=2.11.0                # Data validation and schema enforcement
 
 # --- Q2: Knowledge Base Pipeline ---
 crawl4ai>=0.9.0                 # Web scraping + extraction (open source, v0.9.x)
-openai>=1.82.0                  # Embeddings (text-embedding-3-small)
+sentence-transformers>=3.0.0    # Local vector embeddings
+torch>=2.0.0                    # Backend for sentence-transformers
 qdrant-client>=1.18.0           # Vector database client (latest 2026)
 beautifulsoup4>=4.13.0          # HTML parsing for cleanup
 langchain-text-splitters>=0.3.8 # Semantic text chunking

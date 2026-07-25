@@ -28,9 +28,6 @@ class Config:
     # ── Google Gemini (Primary LLM) ─────────────────────────────
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
 
-    # ── OpenAI (Embeddings only) ────────────────────────────────
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-
     # ── Vapi (Voice Platform) ──────────────────────────────────
     VAPI_API_KEY: str = os.getenv("VAPI_API_KEY", "")
     VAPI_PHONE_NUMBER_ID: str = os.getenv("VAPI_PHONE_NUMBER_ID", "")
@@ -46,8 +43,8 @@ class Config:
     ASSEMBLYAI_API_KEY: str = os.getenv("ASSEMBLYAI_API_KEY", "")
 
     # ── Embedding Configuration ─────────────────────────────────
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "384"))
 
     # ── Application Settings ────────────────────────────────────
     APP_ENV: str = os.getenv("APP_ENV", "development")
