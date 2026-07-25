@@ -1,0 +1,36 @@
+# ============================================================
+# Production Voice AI + RAG — Dependencies
+# ============================================================
+
+# --- Core Framework ---
+fastapi==0.115.12               # REST API for KB retrieval endpoint
+uvicorn[standard]==0.34.3       # ASGI server for FastAPI
+python-dotenv==1.1.0            # Environment variable management
+pydantic==2.11.3                # Data validation and schema enforcement
+
+# --- Q2: Knowledge Base Pipeline ---
+crawl4ai==0.6.2                 # Web scraping + extraction (open source)
+openai==1.82.0                  # Embeddings (text-embedding-3-small)
+qdrant-client==1.14.2           # Vector database client
+beautifulsoup4==4.13.4          # HTML parsing for cleanup
+langchain-text-splitters==0.3.8 # Semantic text chunking
+tiktoken==0.9.0                 # Token counting for chunking
+presidio-analyzer==2.2.358      # PII detection
+presidio-anonymizer==2.2.358    # PII anonymization
+spacy==3.8.7                    # NLP backend for presidio
+
+# --- Q1 + Q3: Voice Agent (Vapi) ---
+vapi-python==0.1.9              # Vapi SDK for voice agent management
+google-genai==1.21.0            # Google Gemini SDK
+requests==2.32.3                # HTTP requests for webhooks
+
+# --- Q4: Real-Time Insights Pipeline ---
+assemblyai==0.37.0              # Streaming ASR transcription
+websockets==15.0.1              # WebSocket server for nudge delivery
+jinja2==3.1.6                   # Dashboard templating
+
+# --- Shared Utilities ---
+structlog==25.4.0               # Structured logging
+uuid7==0.1.0                    # UUID v7 for record IDs (time-sortable)
+aiofiles==24.1.0                # Async file operations
+httpx==0.28.1                   # Async HTTP client
