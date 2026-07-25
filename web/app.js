@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return sorted[index];
     }
 
-    function updateTelemetry(hitsIncrement = 0, newE2ELatency = null) {
+    function updateTelemetry(hitsIncrement = 0, newE2ELatency = null, llmLatency = 0, deliveryLatency = 0) {
         telemetryState.apiHits += hitsIncrement;
         document.getElementById('metric-api-hits').innerText = telemetryState.apiHits;
 
@@ -58,6 +58,13 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('metric-avg-e2e').innerText = `${avg}ms`;
             document.getElementById('metric-p50').innerText = `${p50}ms`;
             document.getElementById('metric-p95').innerText = `${p95}ms`;
+            
+            if (llmLatency > 0) {
+                document.getElementById('metric-llm').innerText = `${llmLatency}ms`;
+            }
+            if (deliveryLatency > 0) {
+                document.getElementById('metric-delivery').innerText = `${deliveryLatency}ms`;
+            }
         }
     }
 
@@ -136,14 +143,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Connect to Q4 router mounted at /q4
         ws = new WebSocket(`${protocol}//${window.location.host}/q4/ws/nudges`);
 
-        ws.onopen = () => {
-            console.log("WebSocket connected");
-        };
-
-        ws.onmessage = (event) => {
+        ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
             
-            if (data.type === "transcript") {
+            if (data.type === 'transcript') {
                 const isFinal = data.is_final;
                 const text = data.text;
                 
@@ -181,8 +184,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 nudgeBox.scrollTop = nudgeBox.scrollHeight;
                 
                 // Track Telemetry
-                if (data.context && data.context.e2e_ms) {
-                    updateTelemetry(1, data.context.e2e_ms); // Extractor call counts as hit
+                if (data.context && data.context.backend_e2e_ms) {
+                    const nowMs = Date.now();
+                    const deliveryLatency = data.context.generated_at_ms ? Math.round(nowMs - data.context.generated_at_ms) : 0;
+                    updateTelemetry(1, data.context.backend_e2e_ms, data.context.llm_latency_ms, deliveryLatency);
                 }
             }
         };

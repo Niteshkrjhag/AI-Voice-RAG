@@ -87,12 +87,17 @@ class AudioStreamPipeline:
             # Finally, loop through any valid nudges and send them to the Web Dashboard!
             for nudge in nudges:
                 e2e_latency = int((time.time() - received_time) * 1000)
+                nudge_generated_at = time.time() * 1000
                 log.info("e2e_latency_measured", llm_latency_ms=result.get("latency_ms", 0), total_e2e_ms=e2e_latency, signal=nudge.get("type"))
                 
                 await self.on_nudge_callback(
                     nudge_type=nudge.get("type", "alert").lower(),
                     message=nudge.get("message", ""),
-                    context={"latency_ms": result.get("latency_ms", 0), "e2e_ms": e2e_latency}
+                    context={
+                        "llm_latency_ms": result.get("latency_ms", 0),
+                        "backend_e2e_ms": e2e_latency,
+                        "generated_at_ms": nudge_generated_at
+                    }
                 )
         except Exception as e:
             log.error("analyze_and_nudge_failed", error=str(e), text=text)
