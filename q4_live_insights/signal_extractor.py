@@ -48,7 +48,7 @@ class SignalExtractor:
         try:
             def call_gemini():
                 return client.models.generate_content(
-                    model="gemini-2.0-flash",
+                    model="gemini-3.5-flash",
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=self.system_prompt,

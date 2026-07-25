@@ -26,6 +26,10 @@ class AudioStreamPipeline:
         # We need the full history of the conversation so the AI has context
         self.full_context = ""
         
+        # Throttler to protect Gemini Free Tier limits with dynamic pattern (10s, 30s, 60s)
+        self.last_gemini_call = 0
+        self.gemini_call_count = 0
+        
         # We'll setup the AssemblyAI transcriber later when the audio actually starts playing
         self.transcriber = None
         
@@ -56,6 +60,16 @@ class AudioStreamPipeline:
         # Running it on every single partial word would waste a lot of money and time.
         if not is_final:
             return
+            
+        # Dynamic Throttling Pattern: 10s -> 30s -> 60s -> repeat
+        throttle_pattern = [10.0, 30.0, 60.0]
+        current_delay = throttle_pattern[self.gemini_call_count % 3]
+        
+        if time.time() - self.last_gemini_call < current_delay:
+            return
+            
+        self.last_gemini_call = time.time()
+        self.gemini_call_count += 1
             
         try:
             # Ask Gemini (SignalExtractor) what it thinks about this sentence
