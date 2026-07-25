@@ -34,5 +34,9 @@ def get_philippines_agent_config(public_api_url: str) -> Dict[str, Any]:
         "transcriber": {
             "provider": "assembly-ai",
             "language": "multi" # Use 'multi' for Tagalog ASR per Vapi schema
+        },
+        "voice": {
+            "provider": "azure",
+            "voiceId": "fil-PH-AngeloNeural"
         }
     }

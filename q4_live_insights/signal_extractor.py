@@ -29,7 +29,7 @@ class SignalExtractor:
         self.system_prompt = (
             "You are a real-time call monitoring AI for a general insurance (auto, home, health) call center. "
             "Analyze the latest transcript segment and return a JSON object with any detected signals. "
-            "Focus ONLY on: 'missed_cross_sell', 'compliance_gap', 'frustration'. "
+            "Focus ONLY on: 'intent_shift', 'compliance_gap', 'frustration', 'buying_signal', 'missed_cross_sell', 'callback_need'. "
             "If none, return empty JSON {}."
         )
 
