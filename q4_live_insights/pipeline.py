@@ -14,17 +14,22 @@ class AudioStreamPipeline:
     then to the SignalExtractor, then to the NudgeEngine.
     """
     def __init__(self, on_nudge, on_transcript):
+        # We store these callback functions so we can push data to the web dashboard
         self.on_nudge_callback = on_nudge
         self.on_transcript_callback = on_transcript
         
+        # Extractor (Gemini) checks the text for insights
         self.extractor = SignalExtractor()
+        # NudgeEngine controls how often alerts are shown (15-second cooldown)
         self.nudge_engine = NudgeEngine(suppression_window_ms=15000)
         
-        # We need full context for LLM extraction
+        # We need the full history of the conversation so the AI has context
         self.full_context = ""
         
-        # We'll setup the transcriber later, bound to an asyncio event loop
+        # We'll setup the AssemblyAI transcriber later when the audio actually starts playing
         self.transcriber = None
+        
+        # Grab the current event loop so we can run background tasks easily
         self._loop = asyncio.get_running_loop()
         
     def _handle_transcript(self, text: str, is_final: bool, received_time: float):
@@ -40,18 +45,27 @@ class AudioStreamPipeline:
         asyncio.run_coroutine_threadsafe(self._analyze_and_nudge(text, is_final), self._loop)
             
     async def _analyze_and_nudge(self, text: str, is_final: bool):
-        # We might only want to run extraction on final transcripts or long partials
-        # For this demo, let's just do it on finals to save LLM tokens.
+        """
+        Takes the spoken text, asks Gemini to find signals (like anger or sales opportunities),
+        and then passes those signals to the Nudge Engine to decide if an alert should be shown.
+        """
+        # We only want to run the expensive AI extraction when a sentence is fully finished (is_final).
+        # Running it on every single partial word would waste a lot of money and time.
         if not is_final:
             return
             
+        # Ask Gemini (SignalExtractor) what it thinks about this sentence
         result = await self.extractor.analyze_transcript(text, self.full_context)
         signals = result.get("signals", {})
         
+        # If Gemini didn't find anything interesting, just stop here
         if not signals:
             return
             
+        # The NudgeEngine checks if we already showed this exact alert recently (suppression cooldown)
         nudges = self.nudge_engine.process_signals(signals)
+        
+        # Finally, loop through any valid nudges and send them to the Web Dashboard!
         for nudge in nudges:
             await self.on_nudge_callback(
                 nudge_type=nudge.get("type", "alert").lower(),

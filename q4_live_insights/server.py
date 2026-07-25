@@ -10,14 +10,18 @@ from q4_live_insights.pipeline import AudioStreamPipeline
 
 log = get_logger("q4.server")
 
+# Initialize the FastAPI web server. This will handle HTTP requests and WebSocket connections.
 app = FastAPI(title="Live Insights Dashboard")
 
-# Track connected WebSocket clients for nudges
+# This list keeps track of all active browser windows connected to our WebSocket.
+# We need this so we can broadcast the live nudges to everyone looking at the dashboard.
 active_connections: list[WebSocket] = []
 
 @app.websocket("/ws/nudges")
 async def websocket_endpoint(websocket: WebSocket):
+    # Accept the incoming connection from the browser
     await websocket.accept()
+    # Add the connection to our list of active clients
     active_connections.append(websocket)
     log.info("ws_client_connected")
     try:
@@ -29,12 +33,16 @@ async def websocket_endpoint(websocket: WebSocket):
         log.info("ws_client_disconnected")
 
 async def broadcast_nudge(nudge_type: str, message: str, context: dict = None):
-    """Called by the pipeline when a nudge is generated."""
+    """
+    Called by the audio pipeline when a nudge is generated (e.g. frustration detected).
+    Sends the nudge as a JSON string to all connected browser dashboards.
+    """
     payload = {
         "type": nudge_type,
         "message": message,
         "context": context or {}
     }
+    # Loop through every connected browser and send the data
     for connection in active_connections:
         try:
             await connection.send_text(json.dumps(payload))
@@ -56,13 +64,17 @@ async def broadcast_transcript(text: str, is_final: bool):
 
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
+    """Serves the main HTML dashboard page when someone visits the root URL (http://localhost:8080/)."""
     html_path = Path(__file__).parent / "templates" / "dashboard.html"
     return html_path.read_text()
 
 @app.post("/start_stream")
 async def start_stream():
-    """Trigger the simulated audio stream."""
-    # Run the pipeline in the background
+    """
+    Endpoint triggered by the 'Start Simulated Call' button on the dashboard.
+    It starts the audio stream simulation in the background so the server isn't blocked.
+    """
+    # asyncio.create_task runs the function in the background
     asyncio.create_task(run_mock_pipeline())
     return {"status": "Stream started"}
 

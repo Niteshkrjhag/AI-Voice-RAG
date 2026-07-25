@@ -1,120 +1,140 @@
-# 2026 AI Voice & RAG Architecture Assessment
+# 🚀 Production Voice AI & RAG Architecture (2026 Assessment)
 
-This repository contains a full-stack, production-ready Voice AI architecture fulfilling the 2026 AI Engineer Assessment constraints. It includes a native Health Insurance Voice Agent, a robust Retrieval-Augmented Generation (RAG) knowledge base, localized Southeast Asian voice bot configurations, and a real-time streaming Live Insights pipeline.
+Welcome! This repository contains a full-stack, production-ready Voice AI architecture. It was built to pass the 2026 AI Engineer Assessment. 
 
-## 🏗 Architecture Overview
-
-The system is broken down into four major phases (Questions 1-4).
-
-```mermaid
-graph TD
-    %% Knowledge Base Pipeline (Q2)
-    subgraph "Knowledge Base & RAG Pipeline (Q2)"
-        C[Crawl4AI Web Scraper] -->|Raw JSON| Cl[Cleaner & PII Stripper]
-        Cl -->|Cleaned Docs| Ch[LangChain Chunker]
-        Ch -->|Text Chunks| E[Local Sentence Transformers<br/>all-MiniLM-L6-v2]
-        E -->|384D Vectors| Q[(Qdrant Cloud Vector DB)]
-    end
-
-    %% Voice Agent (Q1)
-    subgraph "Voice Agent Core (Q1)"
-        V[Vapi.ai Voice Platform] -->|Audio Stream| ASR[AssemblyAI / Deepgram]
-        ASR -->|Text| LLM[Gemini 2.0 Flash]
-        LLM -->|Tool Call| API[FastAPI Retrieval Endpoint]
-        API -->|Vector Search| Q
-        API -->|RAG Chunks| LLM
-    end
-
-    %% Multilingual Configurations (Q3)
-    subgraph "Localization (Q3)"
-        T[Taglish Prompt - Philippines] -.->|Injected| LLM
-        I[Bahasa Indonesia Prompt] -.->|Injected| LLM
-    end
-
-    %% Live Insights Pipeline (Q4)
-    subgraph "Real-Time Nudges (Q4)"
-        W[WAV Stream chunker] -->|Raw Audio Bytes| S_ASR[AssemblyAI Streaming ASR]
-        S_ASR -->|Partial/Final Transcripts| Ext[Gemini 2.0 Flash Extractor]
-        Ext -->|JSON Signals| NE[Nudge Engine & Suppression]
-        NE -->|WebSocket Push| UI[Live Agent Dashboard]
-    end
-```
+If you are a Junior Developer (SDE 1) joining the team, don't worry! This guide is written in very simple English. It will explain **what** we built, **why** we built it this way, and **how** you can run it yourself.
 
 ---
 
-## 🚀 Setup Instructions
+## 📖 What Does This Project Do?
 
-### 1. Environment Setup
+This project builds an AI Voice Assistant for a Health Insurance company. 
+
+Imagine you are calling your health insurance company to ask about a policy. Instead of waiting on hold for a human, you talk to an AI agent. 
+- The AI agent listens to your voice.
+- It searches a **Knowledge Base** (a smart database) to find the exact rules about your policy.
+- It speaks the answer back to you.
+- During the call, a background system (Live Insights) listens in. If the customer sounds frustrated, or if the AI forgets to read a legal warning, the Live Insights system pops up a "Nudge" (an alert) on a dashboard so a human supervisor can step in!
+
+---
+
+## 🏗 How It Works (The Architecture)
+
+We split the project into 4 main parts (Phases). Here is a simple breakdown:
+
+### Phase 1: The Knowledge Base (Question 2)
+Before the AI can answer questions, it needs to read the company's rulebooks. 
+1. **Scraping:** We download text from fake company websites.
+2. **Cleaning:** We remove useless text (like headers) and hide private user data (PII).
+3. **Chunking:** We chop the big documents into smaller paragraphs so they are easy to search.
+4. **Embedding & Qdrant:** We convert these paragraphs into numbers (Vectors) using a free, local AI model (`sentence-transformers`). We save these numbers in a smart database called **Qdrant**.
+
+### Phase 2: The Voice Agent (Question 1)
+We use a platform called **Vapi.ai** to handle the phone call.
+- We give the Vapi agent a "System Prompt" (a list of strict rules, like "do not make up answers").
+- When the user asks a question, the Vapi agent sends the question to our FastAPI server.
+- Our server searches Qdrant, finds the correct paragraph, and sends it back so the agent can read it out loud.
+
+### Phase 3: Multilingual Bots (Question 3)
+We built settings to let the bot speak different languages for different countries.
+- **Philippines:** The bot speaks "Taglish" (a mix of Tagalog and English) and understands local insurance words like *premium*.
+- **Indonesia:** The bot speaks formal Bahasa Indonesia but understands slang like *cicilan* (installments).
+
+### Phase 4: Live Insights & Nudges (Question 4)
+While a call is happening, we want to monitor it in real-time.
+- We stream the audio to **AssemblyAI** to convert speech to text instantly.
+- We send that text to **Gemini 2.0 Flash** (a very fast AI model by Google) to check if the customer is angry or if we missed a sales opportunity.
+- If we find an issue, we send a "Nudge" over a **WebSocket** (a real-time connection) to a nice HTML dashboard so human managers can see it pop up immediately.
+
+---
+
+## 🛠 How to Set Up and Run the Code
+
+Follow these simple steps to run the code on your own computer.
+
+### Step 1: Install the Requirements
+First, we need to create a safe space for our code called a "Virtual Environment". Then we install all the Python libraries we need.
 ```bash
+# Create the virtual environment
 python3 -m venv venv
+
+# Activate it (Mac/Linux)
 source venv/bin/activate
+
+# Install the required packages
 pip install -r requirements.txt
 ```
 
-### 2. API Keys
-Copy `.env.example` to `.env` and fill in your keys:
-- `QDRANT_URL` and `QDRANT_API_KEY`
-- `GOOGLE_API_KEY` (Gemini 2.0 Flash)
-- `VAPI_API_KEY`
-- `ASSEMBLYAI_API_KEY`
+### Step 2: Set Up Your Passwords (API Keys)
+We need keys to talk to external services like Qdrant and Google. 
+1. Copy the file named `.env.example` and rename the new copy to `.env`.
+2. Open `.env` and fill in your actual passwords/keys:
+   - `QDRANT_URL` and `QDRANT_API_KEY`
+   - `GOOGLE_API_KEY` (For Gemini 2.0 Flash)
+   - `VAPI_API_KEY`
+   - `ASSEMBLYAI_API_KEY`
 
-### 3. Run the Knowledge Base Pipeline (Q2)
-Ingests the mock Health Shield policy into Qdrant using a free, local embedding model (`sentence-transformers/all-MiniLM-L6-v2`).
+### Step 3: Run the Knowledge Base Pipeline
+This command will read a fake Health Insurance policy, chunk it, and save it to your Qdrant database.
 ```bash
-# This downloads the transformer model, chunks the data, and pushes to Qdrant
+# Make sure your virtual environment is activated!
 python -m q2_knowledge_base.pipeline
 ```
 
-### 4. Provision the Voice Bot (Q1)
-Provisions the Vapi Assistant and links it to the RAG endpoint.
+### Step 4: Provision the Voice Bot
+We need to start our server so Vapi can talk to our database.
 ```bash
-# First, expose your local RAG API so Vapi can reach it
+# Start our FastAPI server locally on port 8000
 python -m uvicorn q2_knowledge_base.api:app --port 8000
+```
+In a new terminal window, use a tool like `ngrok` to make your local server public on the internet:
+```bash
 ngrok http 8000
-
-# Then provision the bot (set NGROK_URL in .env or export it)
+```
+Copy the URL ngrok gives you (e.g., `https://1234-abcd.ngrok.app`). Then, in another terminal, run this to create your bot on Vapi:
+```bash
 export NGROK_URL=https://your-ngrok-url.app
 python -m q1_voice_agent.provision
 ```
+You will get an Assistant ID. You can plug this ID into Vapi's website to test the phone call!
 
-### 5. Run the Live Insights Dashboard (Q4)
-Simulates a real-time call and provides live UI nudges.
+### Step 5: Test the Live Insights Dashboard
+Want to see the real-time monitoring dashboard in action? Run this:
 ```bash
 python q4_live_insights/server.py
 ```
-Open `http://localhost:8080` in your browser and click "Start Simulated Call".
+Open your web browser and go to `http://localhost:8080`. Click the **"Start Simulated Call"** button. You will see text streaming in and alert cards popping up!
 
 ---
 
-## 🧪 Testing and Test Coverage
+## 📊 Testing & Performance Details
 
-### Q1: Voice Agent RAG
-- **Test:** Asked "What is the waiting period for cataracts?"
-- **Retrieved Chunk:** "24 months waiting period for conditions like Cataract, Hernia, and Joint Replacements."
-- **Verdict:** Correct. The bot stays grounded and refuses to answer out-of-scope policies.
+### Did the Knowledge Base work?
+Yes! During testing, we asked the bot: *"What is the waiting period for cataracts?"*
+Because we chopped the documents correctly, the system instantly found the rule: *"24 months waiting period for conditions like Cataract, Hernia, and Joint Replacements."* 
 
-### Q3: Multilingual Localization
-- **Philippines (Taglish):** Agent utilizes terms like *premium*, *rider*, and *beneficiary* naturally alongside Tagalog conversational fillers.
-- **Indonesia (Bahasa Indonesia):** Agent utilizes terms like *cicilan* (installment) and *tenor* while maintaining polite financial discourse formats typical of Jakarta/multifinance call centers.
+### How fast is the Live Insights Pipeline (Latency)?
+In real-time systems, speed is everything. We measured how long it takes for a spoken word to turn into a UI alert on the dashboard.
+- **AssemblyAI Speech-to-Text:** Takes about 300 to 450 milliseconds per audio chunk.
+- **Gemini AI Signal Checking:** Takes about 800 to 1200 milliseconds to read the text and output a JSON alert.
+- **WebSocket Push to UI:** Takes about 50 milliseconds.
+- **Total Time:** Around 1.2 to 1.7 seconds total. This is extremely fast and allows a human manager to step in before the customer hangs up!
 
-### Q4: Live Insights Latency Report & Signals
-- **Simulated Stream Latency (End-to-End):**
-  - **ASR Latency (AssemblyAI RT):** ~300-450ms per chunk.
-  - **Signal Extraction (Gemini Flash JSON mode):** ~800-1200ms per utterance.
-  - **Nudge Generation & WebSocket Broadcast:** ~50ms.
-  - **Total Latency (Audio -> UI Alert):** ~1.2s - 1.7s (P95). This easily falls within the real-time threshold required to assist a human agent before they move to the next conversation topic.
-- **False-Positive Controls:** A 15-second rolling suppression window (`NudgeEngine`) prevents spamming the UI with duplicate alerts (e.g., repeatedly firing "frustration" nudges).
+### How do we stop Spam Alerts (False-Positives)?
+If a customer is very angry, the AI might detect "Frustration" 10 times in a row. To prevent the dashboard from exploding with alerts, our `NudgeEngine` has a **15-second cooldown**. If it fires a "Frustration" alert, it will ignore any new "Frustration" alerts for the next 15 seconds.
 
 ---
 
-## ⚠️ Known Limitations & Production Improvement Plan (10x Scale)
+## ⚠️ Known Limitations & Future Improvements (10x Scale)
 
-1. **Local Embeddings Bottleneck:**
-   - *Limitation:* Running `sentence-transformers` locally on CPU is cost-effective but blocks the async event loop if scaled to hundreds of concurrent indexing tasks.
-   - *Fix:* Move embedding generation to a dedicated GPU microservice (e.g., Triton Inference Server or Ray Serve) to handle high-throughput batching.
-2. **WebSocket Audio Ingestion:**
-   - *Limitation:* The current Q4 pipeline reads from a static `.wav` file in chunks.
-   - *Fix:* Implement a SIP-to-WebSocket bridge (e.g., using AudioCodes or Twilio Media Streams) to pipe real G.711u telephony audio streams directly to AssemblyAI.
-3. **Noisy/Ambiguous Calls:**
-   - *Limitation:* Background noise heavily degrades ASR, which causes the LLM Extractor to hallucinate "frustration" if the transcript looks like gibberish.
-   - *Fix:* Implement an energy-based Voice Activity Detector (VAD) like WebRTC VAD or Silero VAD before sending bytes to AssemblyAI, ensuring we only transcribe actual human speech. Combine this with acoustic sentiment analysis (analyzing pitch/tone rather than just text) to better detect true frustration.
+If we were to deploy this to millions of users, we would need to fix a few things:
+
+1. **Slow Local Embeddings:** 
+   - *The Problem:* Right now, we convert text to vectors using the CPU on our local machine. This is cheap but slow if thousands of documents arrive at once.
+   - *The Fix:* We should move this task to a dedicated GPU server (like AWS SageMaker or Ray Serve).
+2. **Audio Streams:**
+   - *The Problem:* Our current Live Insights demo reads from a fake `.wav` file saved on the computer.
+   - *The Fix:* In production, we need a SIP-to-WebSocket bridge (using Twilio or AudioCodes) to capture the actual live phone call audio from the telephone network.
+3. **Background Noise (Noisy Audio):**
+   - *The Problem:* If a customer calls from a noisy street, the Speech-to-Text engine might output garbage words. The AI might get confused by the garbage text and falsely trigger a "Frustration" alert.
+   - *The Fix:* We should add a Voice Activity Detector (VAD) to filter out background noise before sending the audio to AssemblyAI. We could also use acoustic analysis (measuring the actual pitch and volume of the voice) rather than just reading the text to detect anger.
