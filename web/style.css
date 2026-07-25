@@ -321,6 +321,34 @@ body {
     line-height: 1.6;
     margin-bottom: 16px;
 }
+
+/* Markdown Specific Styles */
+.kb-markdown-content h1, .kb-markdown-content h2, .kb-markdown-content h3 {
+    color: var(--text-main);
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+.kb-markdown-content h1 { font-size: 1.1rem; }
+.kb-markdown-content h2 { font-size: 1.05rem; }
+.kb-markdown-content h3 { font-size: 1rem; }
+.kb-markdown-content p {
+    margin-bottom: 12px;
+}
+.kb-markdown-content ul, .kb-markdown-content ol {
+    margin-left: 20px;
+    margin-bottom: 16px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+.kb-markdown-content li {
+    margin-bottom: 4px;
+}
+.kb-markdown-content strong {
+    color: #38bdf8;
+}
+
 .search-result-source {
     display: inline-flex;
     align-items: center;

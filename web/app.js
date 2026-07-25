@@ -47,11 +47,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.results && data.results.length > 0) {
                 resultsContainer.innerHTML = '';
                 data.results.forEach(record => {
+                    // Pre-process collapsed markdown strings to ensure proper parsing
+                    let rawContent = record.content;
+                    rawContent = rawContent.replace(/(#{1,6}\s)/g, '\n$1'); // Newlines before headers
+                    rawContent = rawContent.replace(/( - )/g, '\n- '); // Newlines before list items
+                    rawContent = rawContent.replace(/(\*\*.*?\*\*)/g, '$1'); // Preserve bolding
+
+                    // Render to HTML using marked.js
+                    const htmlContent = marked.parse(rawContent);
+
                     const card = document.createElement('div');
                     card.className = 'search-result-card';
                     card.innerHTML = `
                         <h4>${record.title}</h4>
-                        <p>${record.content}</p>
+                        <div class="kb-markdown-content">${htmlContent}</div>
                         <div class="search-result-source">
                             <span>FILE</span> ${record.source_url}
                         </div>
