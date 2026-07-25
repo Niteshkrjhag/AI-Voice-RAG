@@ -18,7 +18,7 @@ def get_kb_search_tool_schema(api_url: str, rag_api_key: str) -> Dict[str, Any]:
     """
     return {
         "type": "apiRequest",
-        "url": f"{api_url}/api/v1/search",
+        "url": f"{api_url}/q2/api/v1/search",
         "method": "POST",
         "server": {
             "headers": {
@@ -59,6 +59,54 @@ def get_kb_search_tool_schema(api_url: str, rag_api_key: str) -> Dict[str, Any]:
                     }
                 },
                 "required": ["query"]
+            }
+        }
+    }
+
+def get_schedule_callback_tool_schema(api_url: str) -> Dict[str, Any]:
+    """
+    Returns the tool schema for scheduling a callback (Optional Business Action).
+    """
+    return {
+        "type": "apiRequest",
+        "url": f"{api_url}/q1/api/v1/schedule_callback",
+        "method": "POST",
+        "server": {
+            "headers": {
+                "Content-Type": "application/json"
+            }
+        },
+        "async": False,
+        "messages": [
+            {
+                "type": "request-start",
+                "content": "Let me pull up the calendar and schedule that callback for you."
+            },
+            {
+                "type": "request-complete",
+                "content": ""
+            },
+            {
+                "type": "request-failed",
+                "content": "I couldn't reach the scheduling system right now, but a senior agent will still reach out."
+            }
+        ],
+        "function": {
+            "name": "schedule_callback",
+            "description": "Schedules a callback for a senior agent. Use this when the user is qualified and wants to proceed.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "preferred_time": {
+                        "type": "string",
+                        "description": "The preferred time for the callback (e.g. 'tomorrow morning', '3 PM')"
+                    },
+                    "phone_number": {
+                        "type": "string",
+                        "description": "The customer's phone number to call back."
+                    }
+                },
+                "required": ["preferred_time"]
             }
         }
     }

@@ -35,6 +35,24 @@ app.add_middleware(
 app.mount("/q2", q2_app)
 app.mount("/q4", q4_app)
 
+class CallbackRequest(BaseModel):
+    preferred_time: str
+    phone_number: str = None
+
+@app.post("/q1/api/v1/schedule_callback")
+async def schedule_callback(payload: CallbackRequest):
+    """
+    Mock endpoint for the Optional Business Action requirement.
+    The Vapi agent hits this tool when the user successfully qualifies.
+    """
+    log.info("callback_scheduled", preferred_time=payload.preferred_time, phone_number=payload.phone_number)
+    return {
+        "results": [{
+            "status": "success",
+            "message": f"Callback successfully scheduled for {payload.preferred_time}. A senior agent will call {payload.phone_number or 'the number on file'}."
+        }]
+    }
+
 # 4. Mount the Static Frontend UI (The Dashboard)
 WEB_DIR = Path(__file__).parent / "web"
 WEB_DIR.mkdir(exist_ok=True)
