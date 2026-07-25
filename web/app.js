@@ -160,4 +160,75 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 10000);
     });
 
+    // --- Vapi Voice SDK (Q1, Q3) ---
+    const vapi = new window.Vapi("39834d71-c855-4eeb-a434-c077c4856e24");
+    
+    const ASSISTANTS = {
+        q1: '05d2ae77-a71f-431d-9b73-1eb908f4f3d9',
+        q3_ph: '8ba3d253-55dc-4fbe-8970-e894cebd05e9',
+        q3_id: '3cbcfe7d-8bd9-4711-b9e2-870666d9c248'
+    };
+
+    let currentCallButton = null;
+    let originalButtonText = "";
+
+    // Vapi Event Listeners
+    vapi.on('call-start', () => {
+        if (currentCallButton) {
+            currentCallButton.textContent = '🔴 End Call';
+            currentCallButton.style.backgroundColor = '#ef4444'; // Red
+            currentCallButton.style.color = '#fff';
+        }
+    });
+
+    vapi.on('call-end', () => {
+        if (currentCallButton) {
+            currentCallButton.textContent = originalButtonText;
+            currentCallButton.style.backgroundColor = ''; // Reset to default
+            currentCallButton.style.color = '';
+            currentCallButton = null;
+        }
+    });
+
+    vapi.on('error', (e) => {
+        console.error("Vapi Error:", e);
+        if (currentCallButton) {
+            currentCallButton.textContent = originalButtonText;
+            currentCallButton.style.backgroundColor = '';
+            currentCallButton.style.color = '';
+            currentCallButton = null;
+        }
+    });
+
+    // Button Handlers
+    function setupCallButton(buttonId, assistantId) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+        
+        btn.addEventListener('click', () => {
+            if (currentCallButton === btn) {
+                // If it's already running on this button, end it
+                vapi.stop();
+            } else if (currentCallButton) {
+                // If a different call is running, stop it first
+                vapi.stop();
+                setTimeout(() => {
+                    originalButtonText = btn.textContent;
+                    currentCallButton = btn;
+                    btn.textContent = 'Connecting...';
+                    vapi.start(assistantId);
+                }, 500);
+            } else {
+                originalButtonText = btn.textContent;
+                currentCallButton = btn;
+                btn.textContent = 'Connecting...';
+                vapi.start(assistantId);
+            }
+        });
+    }
+
+    setupCallButton('btn-q1-call', ASSISTANTS.q1);
+    setupCallButton('btn-q3-ph', ASSISTANTS.q3_ph);
+    setupCallButton('btn-q3-id', ASSISTANTS.q3_id);
+
 });
