@@ -106,7 +106,7 @@ async def start_stream(background_tasks: BackgroundTasks):
     try:
         # In a real app, this would be triggered by a Vapi webhook when a call connects.
         # For the assessment, we simulate it by reading a local file.
-        wav_path = Path(__file__).parent / "test_calls" / "mock_call.wav"
+        wav_path = Path(__file__).parent / "test_calls" / "audio_0.wav"
         
         if not wav_path.exists():
             is_streaming = False
