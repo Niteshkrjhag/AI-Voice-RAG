@@ -30,10 +30,6 @@ def get_indonesia_agent_config(public_api_url: str) -> Dict[str, Any]:
             ],
             "temperature": 0.5
         },
-        "voice": {
-            "provider": "openai",
-            "voiceId": "alloy"
-        },
         "transcriber": {
             "provider": "assembly-ai",
             "language": "id" # Bahasa Indonesia ASR
