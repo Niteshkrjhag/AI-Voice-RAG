@@ -59,8 +59,18 @@ class Config:
     DATA_RAW_DIR: Path = _PROJECT_ROOT / "q2_knowledge_base" / "data" / "raw"
     DATA_CLEANED_DIR: Path = _PROJECT_ROOT / "q2_knowledge_base" / "data" / "cleaned"
     DATA_INDEXED_DIR: Path = _PROJECT_ROOT / "q2_knowledge_base" / "data" / "indexed"
+    
+    def validate(self):
+        """SDE-3: Fast-fail validation to prevent silent crashes later."""
+        required_keys = ["GOOGLE_API_KEY", "VAPI_API_KEY", "ASSEMBLYAI_API_KEY", "QDRANT_API_KEY"]
+        missing = [key for key in required_keys if not getattr(self, key)]
+        if missing:
+            raise ValueError(f"CRITICAL: Missing required environment variables in .env: {', '.join(missing)}")
 
 
 # ── Module-level singleton ──────────────────────────────────────
 # Import as: from shared.config import config
 config = Config()
+
+# SDE-3: Validate configuration immediately on boot
+config.validate()

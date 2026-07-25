@@ -40,6 +40,9 @@ class AudioStreamPipeline:
         # Update full context if final
         if is_final:
             self.full_context += f" {text}"
+            # SDE-3: Prevent unbounded memory leak and API context window exhaustion
+            if len(self.full_context) > 4000:
+                self.full_context = self.full_context[-4000:]
             
         # Analyze transcript (fire and forget so it doesn't block audio ingestion)
         asyncio.run_coroutine_threadsafe(self._analyze_and_nudge(text, is_final), self._loop)
