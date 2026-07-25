@@ -10,6 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from shared.logger import get_logger
 from q4_live_insights.pipeline import AudioStreamPipeline
 
+# 1. Mount the global web directory
+WEB_DIR = Path(__file__).parent.parent / "web"
+
 log = get_logger("q4.server")
 
 # Initialize the FastAPI web server. This will handle HTTP requests and WebSocket connections.
@@ -23,6 +26,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 
 # This list keeps track of all active browser windows connected to our WebSocket.
 # We need this so we can broadcast the live nudges to everyone looking at the dashboard.
@@ -89,9 +94,11 @@ async def broadcast_transcript(text: str, is_final: bool):
 
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
-    """Serves the main HTML dashboard page when someone visits the root URL (http://localhost:8080/)."""
-    html_path = Path(__file__).parent / "templates" / "dashboard.html"
-    return html_path.read_text()
+    """Serves the new unified dashboard."""
+    index_file = WEB_DIR / "index.html"
+    if not index_file.exists():
+        raise HTTPException(status_code=404, detail="Dashboard UI not built yet.")
+    return index_file.read_text()
 
 @app.post("/start_stream")
 async def start_stream(background_tasks: BackgroundTasks):
@@ -133,4 +140,9 @@ async def start_stream(background_tasks: BackgroundTasks):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    import sys
+    log.warning("You ran the old server command. Automatically redirecting to the new Unified Global Server...")
+    # Import the global app
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from server import app as global_app
+    uvicorn.run(global_app, host="0.0.0.0", port=8080)
