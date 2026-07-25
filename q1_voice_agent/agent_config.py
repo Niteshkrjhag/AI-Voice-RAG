@@ -33,7 +33,7 @@ def get_vapi_agent_config(public_api_url: str) -> Dict[str, Any]:
                 }
             ],
             "tools": [
-                get_kb_search_tool_schema(api_url=public_api_url)
+                get_kb_search_tool_schema(api_url=public_api_url, rag_api_key=config.RAG_API_KEY)
             ],
             "temperature": 0.4  # Lower temp to reduce hallucination risk
         },

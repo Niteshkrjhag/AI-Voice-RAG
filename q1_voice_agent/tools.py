@@ -7,13 +7,14 @@ In Vapi (2026 API), these are passed in the `tools` array of the agent configura
 
 from typing import Dict, Any
 
-def get_kb_search_tool_schema(api_url: str) -> Dict[str, Any]:
+def get_kb_search_tool_schema(api_url: str, rag_api_key: str) -> Dict[str, Any]:
     """
     Returns the Vapi-compatible tool schema for the Knowledge Base Search.
     This tells the LLM how and when to call our custom FastAPI endpoint.
     
     Args:
         api_url: The public URL where q2_knowledge_base/api.py is hosted.
+        rag_api_key: The secret key for authenticating with the RAG backend.
     """
     return {
         "type": "custom",
@@ -23,7 +24,8 @@ def get_kb_search_tool_schema(api_url: str) -> Dict[str, Any]:
             "method": "POST",
             "headers": {
                 "Content-Type": "application/json",
-                "X-API-Key": "health-shield-secret-123"
+                # SDE-3: Remove hardcoded InfoSec vulnerability. Inject from environment.
+                "X-API-Key": rag_api_key
             }
         },
         "async": False,

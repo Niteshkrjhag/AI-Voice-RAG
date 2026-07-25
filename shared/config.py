@@ -53,6 +53,7 @@ class Config:
     RETRIEVAL_API_PORT: int = int(os.getenv("RETRIEVAL_API_PORT", "8000"))
     WEBSOCKET_HOST: str = os.getenv("WEBSOCKET_HOST", "0.0.0.0")
     WEBSOCKET_PORT: int = int(os.getenv("WEBSOCKET_PORT", "8765"))
+    RAG_API_KEY: str = os.getenv("RAG_API_KEY", "")
 
     # ── Derived Paths ───────────────────────────────────────────
     PROJECT_ROOT: Path = _PROJECT_ROOT
@@ -62,7 +63,7 @@ class Config:
     
     def validate(self):
         """SDE-3: Fast-fail validation to prevent silent crashes later."""
-        required_keys = ["GOOGLE_API_KEY", "VAPI_API_KEY", "ASSEMBLYAI_API_KEY", "QDRANT_API_KEY"]
+        required_keys = ["GOOGLE_API_KEY", "VAPI_API_KEY", "ASSEMBLYAI_API_KEY", "QDRANT_API_KEY", "RAG_API_KEY"]
         missing = [key for key in required_keys if not getattr(self, key)]
         if missing:
             raise ValueError(f"CRITICAL: Missing required environment variables in .env: {', '.join(missing)}")

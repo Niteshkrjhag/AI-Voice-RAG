@@ -11,6 +11,7 @@ from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
+from shared.config import config
 from shared.logger import get_logger
 from q2_knowledge_base.retriever import search_knowledge_base
 from q2_knowledge_base.schema import KBRecord
@@ -32,7 +33,8 @@ app.add_middleware(
 )
 
 # API Key Security
-API_KEY = os.getenv("RAG_API_KEY", "health-shield-secret-123")
+# SDE-3: Removed hardcoded API key fallback. Must be configured securely.
+API_KEY = config.RAG_API_KEY
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 async def get_api_key(api_key_header: str = Security(api_key_header)):

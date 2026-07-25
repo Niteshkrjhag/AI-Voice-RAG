@@ -25,9 +25,11 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
     Returns:
         List of KBRecords ordered by relevance score.
     """
+    import asyncio
     # 1. Embed the search query
     try:
-        query_embeddings = generate_embeddings([query])
+        # SDE-3: Prevent event loop blocking by offloading CPU-heavy embedding to a thread
+        query_embeddings = await asyncio.to_thread(generate_embeddings, [query])
         query_vector = query_embeddings[0]
     except Exception as e:
         log.error("query_embedding_failed", query=query, error=str(e))
@@ -35,12 +37,15 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
 
     # 2. Search Qdrant with a minimum semantic relevance score
     try:
-        search_results = qdrant_client.query_points(
+        # SDE-3: Prevent event loop blocking by offloading synchronous Qdrant HTTP requests
+        search_results_obj = await asyncio.to_thread(
+            qdrant_client.query_points,
             collection_name=config.QDRANT_COLLECTION_NAME,
             query=query_vector,
             limit=limit,
-            score_threshold=0.3  # SDE-3: Reject completely irrelevant out-of-scope matches
-        ).points
+            score_threshold=0.3  # Reject completely irrelevant out-of-scope matches
+        )
+        search_results = search_results_obj.points
     except Exception as e:
         log.error("qdrant_search_failed", query=query, error=str(e))
         return []
