@@ -124,8 +124,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 const card = document.createElement('div');
                 card.className = `nudge-card ${cssClass}`;
+                
+                let latencyBadge = "";
+                if (data.context && data.context.e2e_ms) {
+                    latencyBadge = `<span style="float:right; font-size: 0.75rem; color: #64748b;">E2E: ${data.context.e2e_ms}ms</span>`;
+                }
+
                 card.innerHTML = `
-                    <strong>${type.toUpperCase().replace(/_/g, ' ')}</strong>
+                    <strong>${type.toUpperCase().replace(/_/g, ' ')}</strong> ${latencyBadge}
                     <p>${message}</p>
                 `;
                 nudgeBox.appendChild(card);

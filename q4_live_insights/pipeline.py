@@ -36,8 +36,9 @@ class AudioStreamPipeline:
         # Grab the current event loop so we can run background tasks easily
         self._loop = asyncio.get_running_loop()
         
-    def _handle_transcript(self, text: str, is_final: bool, received_time: float):
+    def _handle_transcript(self, text: str, is_final: bool):
         """Called by transcriber thread via call_soon_threadsafe"""
+        received_time = time.time()
         # Fire off UI update
         asyncio.run_coroutine_threadsafe(self.on_transcript_callback(text, is_final), self._loop)
         
@@ -49,9 +50,9 @@ class AudioStreamPipeline:
                 self.full_context = self.full_context[-4000:]
             
         # Analyze transcript (fire and forget so it doesn't block audio ingestion)
-        asyncio.run_coroutine_threadsafe(self._analyze_and_nudge(text, is_final), self._loop)
+        asyncio.run_coroutine_threadsafe(self._analyze_and_nudge(text, is_final, received_time), self._loop)
             
-    async def _analyze_and_nudge(self, text: str, is_final: bool):
+    async def _analyze_and_nudge(self, text: str, is_final: bool, received_time: float):
         """
         Takes the spoken text, asks Gemini to find signals (like anger or sales opportunities),
         and then passes those signals to the Nudge Engine to decide if an alert should be shown.
@@ -85,10 +86,13 @@ class AudioStreamPipeline:
             
             # Finally, loop through any valid nudges and send them to the Web Dashboard!
             for nudge in nudges:
+                e2e_latency = int((time.time() - received_time) * 1000)
+                log.info("e2e_latency_measured", llm_latency_ms=result.get("latency_ms", 0), total_e2e_ms=e2e_latency, signal=nudge.get("type"))
+                
                 await self.on_nudge_callback(
                     nudge_type=nudge.get("type", "alert").lower(),
                     message=nudge.get("message", ""),
-                    context={"latency_ms": result.get("latency_ms", 0)}
+                    context={"latency_ms": result.get("latency_ms", 0), "e2e_ms": e2e_latency}
                 )
         except Exception as e:
             log.error("analyze_and_nudge_failed", error=str(e), text=text)
