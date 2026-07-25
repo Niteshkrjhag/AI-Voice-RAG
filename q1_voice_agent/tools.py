@@ -17,11 +17,10 @@ def get_kb_search_tool_schema(api_url: str, rag_api_key: str) -> Dict[str, Any]:
         rag_api_key: The secret key for authenticating with the RAG backend.
     """
     return {
-        "type": "custom",
-        "custom": {
-            "type": "http",
-            "url": f"{api_url}/api/v1/search",
-            "method": "POST",
+        "type": "apiRequest",
+        "url": f"{api_url}/api/v1/search",
+        "method": "POST",
+        "server": {
             "headers": {
                 "Content-Type": "application/json",
                 # SDE-3: Remove hardcoded InfoSec vulnerability. Inject from environment.

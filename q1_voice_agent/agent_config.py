@@ -38,12 +38,8 @@ def get_vapi_agent_config(public_api_url: str) -> Dict[str, Any]:
             "temperature": 0.4  # Lower temp to reduce hallucination risk
         },
         "voice": {
-            "provider": "11labs",
-            "voiceId": "pNInz6obbfDQGcgMyIGb", # Example friendly voice
-            "settings": {
-                "stability": 0.7,
-                "similarityBoost": 0.8
-            }
+            "provider": "openai",
+            "voiceId": "alloy"
         },
         "transcriber": {
             "provider": "assembly-ai",

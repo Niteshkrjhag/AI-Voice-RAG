@@ -31,14 +31,8 @@ def get_indonesia_agent_config(public_api_url: str) -> Dict[str, Any]:
             "temperature": 0.5
         },
         "voice": {
-            # SDE-3: Fixed invalid model string in voiceId. Must use actual character hash.
-            "provider": "11labs",
-            "voiceId": "21m00Tcm4TlvDq8ikWAM", # Rachel voice hash
-            "model": "eleven_multilingual_v2", # Must support Bahasa Indonesia
-            "settings": {
-                "stability": 0.6,
-                "similarityBoost": 0.7
-            }
+            "provider": "openai",
+            "voiceId": "alloy"
         },
         "transcriber": {
             "provider": "assembly-ai",
