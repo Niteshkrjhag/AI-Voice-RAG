@@ -1,3 +1,5 @@
+import Vapi from 'https://esm.sh/@vapi-ai/web';
+
 document.addEventListener("DOMContentLoaded", () => {
     
     // --- Navigation Logic ---
