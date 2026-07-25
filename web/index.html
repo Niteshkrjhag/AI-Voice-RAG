@@ -145,7 +145,10 @@
                     <div class="glass-card flex-center">
                         <h2 style="font-size: 3rem; color: var(--secondary);" id="metric-avg-e2e">0ms</h2>
                         <h3>Avg End-To-End Latency</h3>
-                        <p>Audio -> Transcript -> LLM -> UI</p>
+                        <div style="display:flex; gap:15px; margin-top:10px; color: #64748b; font-size: 0.9rem;">
+                            <span>P50: <strong id="metric-p50">0ms</strong></span>
+                            <span>P95: <strong id="metric-p95">0ms</strong></span>
+                        </div>
                     </div>
                 </div>
             </section>

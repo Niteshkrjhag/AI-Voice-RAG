@@ -30,19 +30,34 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Global Telemetry State ---
     let telemetryState = {
         apiHits: 0,
-        totalE2ELatency: 0,
-        latencyCount: 0
+        latencies: []
     };
+
+    function calculatePercentile(arr, p) {
+        if (arr.length === 0) return 0;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const index = Math.ceil((p / 100) * sorted.length) - 1;
+        return sorted[index];
+    }
 
     function updateTelemetry(hitsIncrement = 0, newE2ELatency = null) {
         telemetryState.apiHits += hitsIncrement;
         document.getElementById('metric-api-hits').innerText = telemetryState.apiHits;
 
         if (newE2ELatency !== null) {
-            telemetryState.totalE2ELatency += newE2ELatency;
-            telemetryState.latencyCount += 1;
-            const avg = Math.round(telemetryState.totalE2ELatency / telemetryState.latencyCount);
+            telemetryState.latencies.push(newE2ELatency);
+            
+            // Calculate Avg
+            const sum = telemetryState.latencies.reduce((a, b) => a + b, 0);
+            const avg = Math.round(sum / telemetryState.latencies.length);
+            
+            // Calculate P50 (Median) and P95
+            const p50 = calculatePercentile(telemetryState.latencies, 50);
+            const p95 = calculatePercentile(telemetryState.latencies, 95);
+
             document.getElementById('metric-avg-e2e').innerText = `${avg}ms`;
+            document.getElementById('metric-p50').innerText = `${p50}ms`;
+            document.getElementById('metric-p95').innerText = `${p95}ms`;
         }
     }
 
