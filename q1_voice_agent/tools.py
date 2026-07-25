@@ -22,7 +22,8 @@ def get_kb_search_tool_schema(api_url: str) -> Dict[str, Any]:
             "url": f"{api_url}/api/v1/search",
             "method": "POST",
             "headers": {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-API-Key": "health-shield-secret-123"
             }
         },
         "async": False,

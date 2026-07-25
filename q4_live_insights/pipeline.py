@@ -88,15 +88,23 @@ class AudioStreamPipeline:
         CHUNK_SIZE = 4096 
         
         try:
-            with open(wav_path, "rb") as f:
+            # We use asyncio.to_thread to run file I/O operations in a background thread.
+            # This prevents standard blocking open() and read() from freezing the async event loop.
+            def read_chunk(file_obj):
+                return file_obj.read(CHUNK_SIZE)
+
+            f = await asyncio.to_thread(open, wav_path, "rb")
+            try:
                 while True:
-                    data = f.read(CHUNK_SIZE)
+                    data = await asyncio.to_thread(read_chunk, f)
                     if not data:
                         break
                     
                     self.transcriber.stream_audio(data)
                     # Simulate real-time delay (roughly 4096 bytes at 16khz 16-bit mono is ~0.128 seconds)
                     await asyncio.sleep(0.128)
+            finally:
+                await asyncio.to_thread(f.close)
                     
             log.info("end_simulated_stream")
             

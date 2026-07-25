@@ -46,8 +46,6 @@ class SignalExtractor:
         prompt = f"Previous Context: {full_context[-500:]}\nLatest utterance: {text}"
         
         try:
-            # We use the fast Gemini Flash model for real-time latency
-            # Using asyncio.to_thread with wait_for to prevent indefinite hangs
             def call_gemini():
                 return client.models.generate_content(
                     model="gemini-2.0-flash",
@@ -58,8 +56,19 @@ class SignalExtractor:
                         temperature=0.1
                     )
                 )
-                
-            response = await asyncio.wait_for(asyncio.to_thread(call_gemini), timeout=5.0)
+
+            # SDE-3 Level Retry Logic (Exponential Backoff)
+            max_retries = 3
+            response = None
+            for attempt in range(max_retries):
+                try:
+                    response = await asyncio.wait_for(asyncio.to_thread(call_gemini), timeout=5.0)
+                    break
+                except Exception as api_err:
+                    if attempt == max_retries - 1:
+                        raise api_err
+                    log.warning("gemini_api_retry", attempt=attempt+1, error=str(api_err))
+                    await asyncio.sleep(0.5 * (2 ** attempt))
             
             latency_ms = int((time.time() - start_time) * 1000)
             
