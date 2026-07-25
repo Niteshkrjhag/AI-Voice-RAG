@@ -62,12 +62,12 @@ class SignalExtractor:
             response = None
             for attempt in range(max_retries):
                 try:
-                    response = await asyncio.wait_for(asyncio.to_thread(call_gemini), timeout=5.0)
+                    response = await asyncio.wait_for(asyncio.to_thread(call_gemini), timeout=20.0)
                     break
                 except Exception as api_err:
                     if attempt == max_retries - 1:
                         raise api_err
-                    log.warning("gemini_api_retry", attempt=attempt+1, error=str(api_err))
+                    log.warning("gemini_api_retry", attempt=attempt+1, error=repr(api_err))
                     await asyncio.sleep(0.5 * (2 ** attempt))
             
             latency_ms = int((time.time() - start_time) * 1000)
@@ -83,5 +83,5 @@ class SignalExtractor:
             return {"signals": signals, "latency_ms": latency_ms}
             
         except Exception as e:
-            log.error("signal_extraction_failed", error=str(e))
+            log.error("signal_extraction_failed", error=repr(e))
             return {"signals": {}, "latency_ms": 0}
