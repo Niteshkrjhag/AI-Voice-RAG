@@ -6,6 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+import asyncio
+from contextlib import asynccontextmanager
 
 from shared.logger import get_logger
 from shared.telemetry import store as telemetry_store
@@ -13,14 +15,24 @@ from shared.telemetry import store as telemetry_store
 # Import Q2 API and Q4 Server
 from q2_knowledge_base.api import app as q2_app
 from q4_live_insights.server import app as q4_app
+from q4_live_insights.server import broadcast_telemetry_loop
 
 log = get_logger("unified.server")
+
+@asynccontextmanager
+async def global_lifespan(app: FastAPI):
+    # FastAPI does not trigger lifespans for mounted apps.
+    # We must start the telemetry background loop globally.
+    telemetry_task = asyncio.create_task(broadcast_telemetry_loop())
+    yield
+    telemetry_task.cancel()
 
 # 1. Create the unified FastAPI App
 app = FastAPI(
     title="Unified AI Assessment Dashboard",
     description="Consolidates Voice Agent, Knowledge Base, Multilingual Bots, and Live Insights into a single dashboard.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=global_lifespan
 )
 
 # 2. Add CORS Middleware
