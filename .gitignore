@@ -28,3 +28,6 @@ q2_knowledge_base/data/indexed/*
 
 # Qdrant local storage
 qdrant_storage/
+vapi_data/
+headers.txt
+server.log
