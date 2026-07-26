@@ -2,19 +2,19 @@
 
 Welcome! This repository contains a full-stack, enterprise-ready Voice AI architecture, engineered from scratch for the 2026 AI Engineer Assessment.
 
-This README is designed to explain **everything we built, how it works, and why we made our technical decisions**. It strictly follows the assessment requirements and acts as the final submission package, outlining the architecture, setup instructions, sample inputs, test results, limitations, and our production improvement plan.
+This README is designed to explain **everything I built, how it works, and why I made my technical decisions**. It strictly follows the assessment requirements and acts as the final submission package, outlining the architecture, setup instructions, sample inputs, test results, limitations, and my production improvement plan.
 
 ---
 
-## 📖 1. What We Built & Overall Decisions
+## 📖 1. What I Built & Overall Decisions
 
-We built a real-time AI Voice Assistant system capable of conversing with customers, retrieving ground-truth policy documents dynamically (RAG), adapting to Southeast Asian code-switching natively, and providing live compliance/sales nudges to human supervisors. 
+I built a real-time AI Voice Assistant system capable of conversing with customers, retrieving ground-truth policy documents dynamically (RAG), adapting to Southeast Asian code-switching natively, and providing live compliance/sales nudges to human supervisors. 
 
 **Overall Architectural Decisions (Practical Code Implementations):**
-1. **Unified Backend Engine:** We bundled Q1 (Voice Agent RAG API), Q2 (Vector DB Retrieval), and Q4 (Live Insights WebSocket) into a single high-performance `FastAPI` instance. This completely eliminates internal network latency and CORS complexity.
-2. **Deterministic RAG & Schema:** Instead of letting the LLM guess parameters, we enforced strict JSON Schemas for tool calling, resulting in zero hallucinated queries.
-3. **Multilingual Translation Layer:** We discovered that semantic vector search fails if you search an English policy document using a Tagalog query. To fix this, we hardcoded an XML instruction in the System Prompts requiring the agent to silently translate the user's intent into English *before* querying the Knowledge Base.
-4. **Resilient Async Telemetry & Buffer Queues:** Fire-and-forget threading in Python often causes memory leaks (OOM) and dropped audio packets. We replaced legacy threading with rock-solid `asyncio` background daemons. For example, the Live Insights pipeline uses a strict 15-second buffer flush loop to guarantee zero audio loss during LLM API cooldowns. We also built a centralized `TelemetryStore` backend to calculate percentiles (P50/P95) server-side, preventing the UI browser tab from freezing under heavy traffic.
+1. **Unified Backend Engine:** I bundled Q1 (Voice Agent RAG API), Q2 (Vector DB Retrieval), and Q4 (Live Insights WebSocket) into a single high-performance `FastAPI` instance. This completely eliminates internal network latency and CORS complexity.
+2. **Deterministic RAG & Schema:** Instead of letting the LLM guess parameters, I enforced strict JSON Schemas for tool calling, resulting in zero hallucinated queries.
+3. **Multilingual Translation Layer:** I discovered that semantic vector search fails if you search an English policy document using a Tagalog query. To fix this, I hardcoded an XML instruction in the System Prompts requiring the agent to silently translate the user's intent into English *before* querying the Knowledge Base.
+4. **Resilient Async Telemetry & Buffer Queues:** Fire-and-forget threading in Python often causes memory leaks (OOM) and dropped audio packets. I replaced legacy threading with rock-solid `asyncio` background daemons. For example, the Live Insights pipeline uses a strict 15-second buffer flush loop to guarantee zero audio loss during LLM API cooldowns. I also built a centralized `TelemetryStore` backend to calculate percentiles (P50/P95) server-side, preventing the UI browser tab from freezing under heavy traffic.
 
 ---
 
@@ -102,7 +102,7 @@ ngrok http 8080
 ```
 
 ### 6. Provision the Voice Agents (Q1 & Q3)
-Run our provisioning scripts to automatically create the Voice Agents in your Vapi account. 
+Run my provisioning scripts to automatically create the Voice Agents in your Vapi account. 
 ```bash
 # Provision the English Bot (Q1)
 python -m q1_voice_agent.provision
@@ -119,10 +119,10 @@ Open `http://localhost:8080` in your browser to search the Knowledge Base, initi
 
 ## 🗂 4. Knowledge Base Design & Sample Inputs
 
-To solve **Question 2**, we built a production-ready RAG pipeline.
+To solve **Question 2**, I built a production-ready RAG pipeline.
 
 ### Document Schema & Chunking Strategy
-We process unstructured markdown/HTML into a strict schema. We use a **Semantic Chunker** that splits documents dynamically at markdown header boundaries (`##`) rather than arbitrary character counts, ensuring context is never chopped in half.
+I process unstructured markdown/HTML into a strict schema. I use a **Semantic Chunker** that splits documents dynamically at markdown header boundaries (`##`) rather than arbitrary character counts, ensuring context is never chopped in half.
 
 **Sample Record Structure:**
 ```json
@@ -139,15 +139,15 @@ We process unstructured markdown/HTML into a strict schema. We use a **Semantic 
 
 ### Taxonomy, Versioning, and Citation
 - **Taxonomy:** Files are routed to broad categories (e.g., `health_insurance`, `bancassurance`) during extraction to allow for metadata pre-filtering during queries.
-- **Versioning & Duplication:** We hash the raw text using `hashlib.md5()`. If a document is updated, the hash changes, generating a new `record_id` and cleanly overwriting the outdated vector in Qdrant.
-- **Embedding & Ranking:** We utilize the `all-MiniLM-L6-v2` SentenceTransformer to create dense 384-dimensional vectors. During retrieval, Qdrant ranks chunks by **Cosine Similarity**, and we enforce a strict `0.30` confidence threshold to block irrelevant data and prevent hallucinations.
+- **Versioning & Duplication:** I hash the raw text using `hashlib.md5()`. If a document is updated, the hash changes, generating a new `record_id` and cleanly overwriting the outdated vector in Qdrant.
+- **Embedding & Ranking:** I utilize the `all-MiniLM-L6-v2` SentenceTransformer to create dense 384-dimensional vectors. During retrieval, Qdrant ranks chunks by **Cosine Similarity**, and I enforce a strict `0.30` confidence threshold to block irrelevant data and prevent hallucinations.
 
 ---
 
 ## 🧪 5. Test Results & Evidence
 
 ### Q1 & Q3: Voice Agent Conversational Testing
-We executed multi-turn scenario tests against the deployed agents. The agents successfully demonstrated:
+I executed multi-turn scenario tests against the deployed agents. The agents successfully demonstrated:
 1. **Cooperative Flow:** Successfully collected age and needs before proceeding.
 2. **Grounded Retrieval:** Dynamically searched the policy database for waiting periods and premiums.
 3. **Objection Handling:** Acknowledged pricing objections and offered callback escalations rather than arguing.
@@ -157,7 +157,7 @@ We executed multi-turn scenario tests against the deployed agents. The agents su
 *(Transcripts of these tests are available in the `test_evidence/` folder).*
 
 ### Q2: Knowledge Base Retrieval Testing
-We ran automated queries against the Qdrant database to verify precision:
+I ran automated queries against the Qdrant database to verify precision:
 1. **Product:** *"What are the rules for pre-existing diseases?"* → **Retrieved accurately (Score 0.850)**.
 2. **Qualification:** *"Can I add my newborn baby to my health policy?"* → **Retrieved accurately**.
 3. **FAQ:** *"Does the policy cover COVID-19?"* → **Retrieved accurately**.
@@ -176,16 +176,16 @@ The pipeline successfully captures live audio, runs it through AssemblyAI, and u
 
 ## ⚠️ 6. Known Limitations & Production-Improvement Plan
 
-While this architecture is highly robust for a prototype, here is our roadmap to scale it to 10,000+ simultaneous calls:
+While this architecture is highly robust for a prototype, here is my roadmap to scale it to 10,000+ simultaneous calls:
 
 ### Known Limitations
 1. **WebSocket Bottlenecks (Q4):** Broadcasting live nudges over a Python `asyncio` loop to a global list of connections will block the server at scale. 
-2. **LLM Rate Limiting:** We currently use a 15-second buffer throttle to protect Gemini's rate limits. At massive scale, we will hit "Too Many Requests" (HTTP 429).
+2. **LLM Rate Limiting:** I currently use a 15-second buffer throttle to protect Gemini's rate limits. At massive scale, I will hit "Too Many Requests" (HTTP 429).
 3. **Code-Switching Latency (Q3):** The `multi` language ASR model takes slightly longer (about 200ms) to infer the spoken language compared to a strict `en` model, adding a tiny delay to the conversation.
 
 ### Production Improvement Plan
 1. **Redis Pub/Sub:** Offload all WebSocket broadcasts from the FastAPI memory layer into a dedicated Redis Pub/Sub cluster.
-2. **LLM Fallback & Token Buckets:** Implement an enterprise Token Bucket queue for the Live Insights pipeline. If Gemini rate-limits us, the system should gracefully failover to a highly optimized local model (like Llama-3-8B-Instruct) for basic frustration detection.
-3. **Agent State Management (Semantic Memory):** Instead of passing the entire conversation history to the LLM (which wastes tokens and hits memory limits), we should implement a rolling semantic summarization buffer.
+2. **LLM Fallback & Token Buckets:** Implement an enterprise Token Bucket queue for the Live Insights pipeline. If Gemini rate-limits me, the system should gracefully failover to a highly optimized local model (like Llama-3-8B-Instruct) for basic frustration detection.
+3. **Agent State Management (Semantic Memory):** Instead of passing the entire conversation history to the LLM (which wastes tokens and hits memory limits), I should implement a rolling semantic summarization buffer.
 4. **Retrieval Evaluator (RAGAS):** Implement automated RAGAS (Retrieval Augmented Generation Assessment) to continuously measure how accurately the AI finds correct answers against ground-truth labels in overnight CI/CD pipelines.
 5. **PII Vaulting:** Ensure the `pii_detected` flag dynamically routes payload data to a secure, compliant vault, scrubbing credit card and SSN data *before* it hits the LLM provider.
