@@ -1,6 +1,6 @@
 import Vapi from 'https://esm.sh/@vapi-ai/web';
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     
     // --- Navigation & State Persistence Logic ---
     const navButtons = document.querySelectorAll('.nav-btn');
@@ -201,11 +201,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Vapi Voice SDK (Q1, Q3) ---
     let vapi = null;
     try {
-        vapi = new Vapi("39834d71-c855-4eeb-a434-c077c4856e24");
-        console.log("Vapi SDK initialized successfully.");
+        // Fetch dynamic configuration from the backend
+        const configRes = await fetch('/api/config');
+        const config = await configRes.json();
+        
+        if (config.VAPI_PUBLIC_KEY) {
+            vapi = new Vapi(config.VAPI_PUBLIC_KEY);
+            console.log("Vapi SDK initialized successfully with dynamic key.");
+        } else {
+            console.warn("VAPI_PUBLIC_KEY is not set in backend .env file!");
+        }
     } catch (e) {
         console.error("Failed to initialize Vapi SDK:", e);
-        alert("Failed to load Vapi Web SDK. Check your internet connection or browser console for errors.");
+        alert("Failed to load Vapi Web SDK or fetch config. Check your internet connection or backend server.");
     }
     
     const ASSISTANTS = {

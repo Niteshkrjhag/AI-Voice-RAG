@@ -98,6 +98,13 @@ async def authenticate_caller(payload: AuthRequest):
         }]
     }
 
+@app.get("/api/config")
+async def get_frontend_config():
+    """Expose non-secret public keys to the frontend."""
+    return {
+        "VAPI_PUBLIC_KEY": os.getenv("VAPI_PUBLIC_KEY", "")
+    }
+
 # 4. Mount the Static Frontend UI (The Dashboard)
 WEB_DIR = Path(__file__).parent / "web"
 WEB_DIR.mkdir(exist_ok=True)
