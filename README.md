@@ -30,29 +30,27 @@ graph TD
     classDef database fill:#bfb,stroke:#333,stroke-width:2px;
     classDef frontend fill:#fbb,stroke:#333,stroke-width:2px;
 
-    %% Actors and Telephony
-    User((🗣️ Customer)) -->|Speaks| Vapi[📞 Vapi Voice Platform]
+    %% 1. Data Ingestion Flow (Offline)
+    Crawler[1a. 🕷️ Crawl4AI] --> Cleaner[1b. 🧹 Data Cleaner & PII Redactor]
+    Cleaner --> Chunker[1c. ✂️ Semantic Chunker]
+    Chunker --> Embedder[1d. 🧠 SentenceTransformer]
+    Embedder -->|1e. Upsert Vectors| Qdrant[(📚 Qdrant Vector DB)]
     
-    %% Main RAG Flow
-    Vapi -->|Custom Tool Request| FastAPI[⚙️ FastAPI RAG Server]
-    FastAPI -->|Semantic Search| Qdrant[(📚 Qdrant Vector DB)]
-    Qdrant -->|Policy Documents| FastAPI
-    FastAPI -->|JSON Response| Vapi
-    Vapi -->|Speaks Answer| User
+    %% 2. Main Conversational RAG Flow
+    User((2a. 🗣️ Customer)) -->|2b. Speaks| Vapi[2c. 📞 Vapi Voice Platform]
+    Vapi -->|2d. Custom Tool Request| FastAPI[2e. ⚙️ FastAPI RAG Server]
+    FastAPI -->|2f. Semantic Search| Qdrant
+    Qdrant -->|2g. Policy Documents| FastAPI
+    FastAPI -->|2h. JSON Response| Vapi
+    Vapi -->|2i. Speaks Answer| User
     
-    %% Data Ingestion Flow (Offline)
-    Crawler[🕷️ Crawl4AI] --> Cleaner[🧹 Data Cleaner & PII Redactor]
-    Cleaner --> Chunker[✂️ Semantic Chunker]
-    Chunker --> Embedder[🧠 SentenceTransformer]
-    Embedder -->|Upsert Vectors| Qdrant
-    
-    %% Live Insights Flow
-    Vapi -.->|Audio Fork| StreamServer[🎧 FastAPI Stream Server]
-    StreamServer -->|WebSocket| AAI[🎙️ AssemblyAI ASR]
-    AAI -->|Live Transcripts| StreamServer
-    StreamServer -->|Extract Signals| Gemini[🧠 Gemini 3.5 Flash]
-    Gemini -->|Frustration/Sales| Nudge[🚨 Nudge Engine]
-    Nudge -->|WebSocket Push| Dashboard[💻 Web UI Dashboard]
+    %% 3. Live Insights Flow
+    Vapi -.->|3a. Audio Fork| StreamServer[3b. 🎧 FastAPI Stream Server]
+    StreamServer -->|3c. WebSocket| AAI[3d. 🎙️ AssemblyAI ASR]
+    AAI -->|3e. Live Transcripts| StreamServer
+    StreamServer -->|3f. Extract Signals| Gemini[3g. 🧠 Gemini 3.5 Flash]
+    Gemini -->|3h. Frustration/Sales| Nudge[3i. 🚨 Nudge Engine]
+    Nudge -->|3j. WebSocket Push| Dashboard[3k. 💻 Web UI Dashboard]
     
     %% Apply Styles
     class Vapi,AAI,Gemini,Crawler external;
