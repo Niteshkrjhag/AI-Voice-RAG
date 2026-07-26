@@ -119,7 +119,7 @@ Open `http://localhost:8080` in your browser to search the Knowledge Base, initi
 
 ## 🗂 4. Knowledge Base Design & Sample Inputs
 
-To solve **Question 2**, I built a production-ready RAG pipeline.
+To solve **Question 2**, I built a robust RAG pipeline.
 
 ### Document Schema & Chunking Strategy
 I process unstructured markdown/HTML into a strict schema. I use a **Semantic Chunker** that splits documents dynamically at markdown header boundaries (`##`) rather than arbitrary character counts, ensuring context is never chopped in half.
