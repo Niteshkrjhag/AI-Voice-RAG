@@ -31,6 +31,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def log_headers(request: Request, call_next):
+    log.info("incoming_request", path=request.url.path, headers=dict(request.headers))
+    response = await call_next(request)
+    return response
+
 # 3. Mount existing routers from other sub-applications
 app.mount("/q2", q2_app)
 app.mount("/q4", q4_app)
@@ -50,6 +56,23 @@ async def schedule_callback(payload: CallbackRequest):
         "results": [{
             "status": "success",
             "message": f"Callback successfully scheduled for {payload.preferred_time}. A senior agent will call {payload.phone_number or 'the number on file'}."
+        }]
+    }
+
+class AuthRequest(BaseModel):
+    dob: str
+    policy_number: str
+
+@app.post("/q1/api/v1/authenticate")
+async def authenticate_caller(payload: AuthRequest):
+    """
+    Mock endpoint for PII authentication.
+    """
+    log.info("caller_authenticated", dob=payload.dob, policy_number=payload.policy_number)
+    return {
+        "results": [{
+            "status": "success",
+            "message": "Identity verified successfully. You may proceed."
         }]
     }
 

@@ -28,7 +28,7 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
     import asyncio
     # 1. Embed the search query
     try:
-        # SDE-3: Prevent event loop blocking by offloading CPU-heavy embedding to a thread
+        # Prevent event loop blocking by offloading CPU-heavy embedding to a thread
         query_embeddings = await asyncio.to_thread(generate_embeddings, [query])
         query_vector = query_embeddings[0]
     except Exception as e:
@@ -37,7 +37,7 @@ async def search_knowledge_base(query: str, limit: int = 5) -> List[KBRecord]:
 
     # 2. Search Qdrant with a minimum semantic relevance score
     try:
-        # SDE-3: Prevent event loop blocking by offloading synchronous Qdrant HTTP requests
+        # Prevent event loop blocking by offloading synchronous Qdrant HTTP requests
         search_results_obj = await asyncio.to_thread(
             qdrant_client.query_points,
             collection_name=config.QDRANT_COLLECTION_NAME,

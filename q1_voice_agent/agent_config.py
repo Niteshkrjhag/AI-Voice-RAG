@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 from shared.config import config
 from q1_voice_agent.system_prompt import SYSTEM_PROMPT, INITIAL_MESSAGE
-from q1_voice_agent.tools import get_kb_search_tool_schema, get_schedule_callback_tool_schema
+from q1_voice_agent.tools import get_kb_search_tool_schema, get_schedule_callback_tool_schema, get_auth_tool_schema
 
 
 def get_vapi_agent_config(public_api_url: str) -> Dict[str, Any]:
@@ -34,7 +34,10 @@ def get_vapi_agent_config(public_api_url: str) -> Dict[str, Any]:
             ],
             "tools": [
                 get_kb_search_tool_schema(api_url=public_api_url, rag_api_key=config.RAG_API_KEY),
-                get_schedule_callback_tool_schema(api_url=public_api_url)
+                get_schedule_callback_tool_schema(api_url=public_api_url, rag_api_key=config.RAG_API_KEY),
+                get_auth_tool_schema(api_url=public_api_url, rag_api_key=config.RAG_API_KEY),
+                {"type": "transferCall", "destinations": [{"type": "number", "number": "+18005550199", "message": "Please wait while I transfer you."}]},
+                {"type": "endCall"}
             ],
             "temperature": 0.4  # Lower temp to reduce hallucination risk
         },
@@ -44,6 +47,7 @@ def get_vapi_agent_config(public_api_url: str) -> Dict[str, Any]:
         },
         "recordingEnabled": True,  # Required for assessment (must record test calls)
         "endCallFunctionEnabled": True,
+        "maxDurationSeconds": 1800, # Prevents runaway billing
         "clientMessages": [
             "transcript",
             "hang",

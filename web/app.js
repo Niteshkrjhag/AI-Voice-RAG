@@ -55,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const p50 = calculatePercentile(telemetryState.latencies, 50);
             const p95 = calculatePercentile(telemetryState.latencies, 95);
 
+            document.getElementById('metric-current-e2e').innerText = `${newE2ELatency}ms`;
             document.getElementById('metric-avg-e2e').innerText = `${avg}ms`;
             document.getElementById('metric-p50').innerText = `${p50}ms`;
             document.getElementById('metric-p95').innerText = `${p95}ms`;
@@ -162,6 +163,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 
             } else {
                 const type = data.type || "alert";
+                
+                // Track Telemetry invisibly
+                if (type === "telemetry_update") {
+                    if (data.context && data.context.backend_e2e_ms) {
+                        const nowMs = Date.now();
+                        const deliveryLatency = data.context.generated_at_ms ? Math.round(nowMs - data.context.generated_at_ms) : 0;
+                        updateTelemetry(1, data.context.backend_e2e_ms, data.context.llm_latency_ms, deliveryLatency);
+                    }
+                    return; // Skip visual card generation
+                }
+                
                 const message = data.message || "";
                 
                 let cssClass = "alert";
@@ -177,18 +189,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 card.innerHTML = `
-                    <strong>${type.toUpperCase().replace(/_/g, ' ')}</strong> ${latencyBadge}
+                    <strong>${type.toUpperCase().replace(/_/g, ' ')}</strong>
                     <p>${message}</p>
                 `;
                 nudgeBox.appendChild(card);
                 nudgeBox.scrollTop = nudgeBox.scrollHeight;
-                
-                // Track Telemetry
-                if (data.context && data.context.backend_e2e_ms) {
-                    const nowMs = Date.now();
-                    const deliveryLatency = data.context.generated_at_ms ? Math.round(nowMs - data.context.generated_at_ms) : 0;
-                    updateTelemetry(1, data.context.backend_e2e_ms, data.context.llm_latency_ms, deliveryLatency);
-                }
             }
         };
 
@@ -274,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
         vapi.on('message', async (message) => {
             if (message.type === 'transcript' && message.transcriptType === 'final') {
                 try {
-                    await fetch('/analyze_transcript_direct', {
+                    await fetch('/q4/analyze_transcript_direct', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: message.transcript, is_final: true })

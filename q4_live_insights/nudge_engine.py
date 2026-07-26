@@ -50,22 +50,21 @@ class NudgeEngine:
         # Extract the dynamic text provided by the LLM if it's a dict, or fallback to string
         dynamic_message = details if isinstance(details, str) else str(details.get("reasoning", details))
         
-        if signal_type == "missed_cross_sell":
-            return {
-                "type": "SUGGESTION",
-                "message": f"Cross-sell Opportunity: {dynamic_message}",
-                "urgency": "low"
-            }
-        elif signal_type == "compliance_gap":
-            return {
-                "type": "COMPLIANCE",
-                "message": f"⚠️ Compliance Risk: {dynamic_message}",
-                "urgency": "high"
-            }
-        elif signal_type == "frustration":
-            return {
-                "type": "ALERT",
-                "message": f"🚨 Frustration Detected: {dynamic_message}",
-                "urgency": "high"
-            }
-        return None
+        # Dynamically format any signal the LLM detects
+        formatted_type = signal_type.replace("_", " ").title()
+        
+        # Assign urgency dynamically based on keywords
+        urgency = "low"
+        if any(urgent_word in signal_type.lower() for urgent_word in ["frustration", "compliance", "risk", "gap", "angry", "escalate"]):
+            urgency = "high"
+            
+        # Determine prefix emoji
+        emoji = "💡"
+        if urgency == "high":
+            emoji = "🚨" if "frustration" in signal_type or "angry" in signal_type else "⚠️"
+            
+        return {
+            "type": signal_type.upper(),
+            "message": f"{emoji} {formatted_type}: {dynamic_message}",
+            "urgency": urgency
+        }

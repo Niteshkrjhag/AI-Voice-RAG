@@ -44,11 +44,14 @@ class SignalExtractor:
 
         start_time = time.time()
         
-        prompt = f"Previous Context: {full_context[-500:]}\nLatest utterance: {text}"
+        words = full_context.split()
+        safe_context = " ".join(words[-80:]) if words else ""
+        prompt = f"Previous Context: {safe_context}\nLatest utterance: {text}"
         
         try:
-            def call_gemini():
-                return client.models.generate_content(
+            # Native Async GenAI SDK (no threading overhead)
+            async def call_gemini():
+                return await client.aio.models.generate_content(
                     model="gemini-3.5-flash",
                     contents=prompt,
                     config=types.GenerateContentConfig(
@@ -58,12 +61,12 @@ class SignalExtractor:
                     )
                 )
 
-            # SDE-3 Level Retry Logic (Exponential Backoff)
+            # Retry Logic (Exponential Backoff)
             max_retries = 3
             response = None
             for attempt in range(max_retries):
                 try:
-                    response = await asyncio.wait_for(asyncio.to_thread(call_gemini), timeout=20.0)
+                    response = await asyncio.wait_for(call_gemini(), timeout=20.0)
                     break
                 except Exception as api_err:
                     if attempt == max_retries - 1:

@@ -31,6 +31,8 @@ class Config:
     # ── Vapi (Voice Platform) ──────────────────────────────────
     VAPI_API_KEY: str = os.getenv("VAPI_API_KEY", "")
     VAPI_PHONE_NUMBER_ID: str = os.getenv("VAPI_PHONE_NUMBER_ID", "")
+    PH_TRANSFER_NUMBER: str = os.getenv("PH_TRANSFER_NUMBER", "+639171234567")
+    ID_TRANSFER_NUMBER: str = os.getenv("ID_TRANSFER_NUMBER", "+628111234567")
 
     # ── Qdrant (Vector Database) ────────────────────────────────
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -62,7 +64,7 @@ class Config:
     DATA_INDEXED_DIR: Path = _PROJECT_ROOT / "q2_knowledge_base" / "data" / "indexed"
     
     def validate(self):
-        """SDE-3: Fast-fail validation to prevent silent crashes later."""
+        """Fast-fail validation to prevent silent crashes later."""
         required_keys = ["GOOGLE_API_KEY", "VAPI_API_KEY", "ASSEMBLYAI_API_KEY", "QDRANT_API_KEY", "RAG_API_KEY"]
         missing = [key for key in required_keys if not getattr(self, key)]
         if missing:
@@ -73,5 +75,5 @@ class Config:
 # Import as: from shared.config import config
 config = Config()
 
-# SDE-3: Validate configuration immediately on boot
+# Validate configuration immediately on boot
 config.validate()

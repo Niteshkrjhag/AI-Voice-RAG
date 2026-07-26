@@ -34,7 +34,7 @@ app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 # We need this so we can broadcast the live nudges to everyone looking at the dashboard.
 active_connections: list[WebSocket] = []
 
-# SDE-3: Global state lock to prevent concurrent audio streams
+# Global state lock to prevent concurrent audio streams
 is_streaming = False
 
 # Global Pipeline for Live Vapi Calls (Q1/Q3 -> Q4 integration)
@@ -133,7 +133,7 @@ async def start_stream(background_tasks: BackgroundTasks):
             on_transcript=broadcast_transcript
         )
         
-        # SDE-3: Wrap the pipeline in a background task that resets the lock when done
+        # Wrap the pipeline in a background task that resets the lock when done
         async def run_pipeline_with_lock():
             global is_streaming
             try:
@@ -159,15 +159,11 @@ async def analyze_transcript_direct(payload: TranscriptPayload):
             on_nudge=broadcast_nudge,
             on_transcript=broadcast_transcript
         )
+        global_pipeline.start()
     
-    # Broadcast the transcript to the UI so it shows up in the Q4 window
-    await broadcast_transcript(payload.text, payload.is_final)
-    
-    # Pass to the analyzer which runs Gemini and the Nudge Engine
-    # We must await it here or run it as a background task. 
-    # _analyze_and_nudge is async and handles its own throttling.
+    # Pass to the analyzer which runs the Nudge Engine
     import time
-    asyncio.create_task(global_pipeline._analyze_and_nudge(payload.text, payload.is_final, time.time()))
+    global_pipeline.add_transcript(payload.text, payload.is_final, time.time())
     return {"status": "queued"}
 
 if __name__ == "__main__":

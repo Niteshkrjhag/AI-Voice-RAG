@@ -17,10 +17,18 @@ from sentence_transformers import SentenceTransformer
 
 log = get_logger("q2.embedder")
 
-# Initialize clients using centralized config
-# Load the local sentence-transformer model in memory
-embedding_model = SentenceTransformer(config.EMBEDDING_MODEL)
+# Initialize Qdrant client using centralized config
 qdrant_client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
+
+_embedding_model_instance = None
+
+def get_embedding_model():
+    """Lazy load the SentenceTransformer model to prevent memory bloat on import."""
+    global _embedding_model_instance
+    if _embedding_model_instance is None:
+        log.info("loading_ml_model", model=config.EMBEDDING_MODEL)
+        _embedding_model_instance = SentenceTransformer(config.EMBEDDING_MODEL)
+    return _embedding_model_instance
 
 
 def generate_embeddings(texts: List[str]) -> List[List[float]]:
@@ -31,8 +39,9 @@ def generate_embeddings(texts: List[str]) -> List[List[float]]:
         return []
 
     try:
+        model = get_embedding_model()
         # encode() returns a numpy array, we convert to list of floats for Qdrant
-        embeddings = embedding_model.encode(texts, show_progress_bar=False)
+        embeddings = model.encode(texts, show_progress_bar=False)
         embeddings_list = [vector.tolist() for vector in embeddings]
         log.debug("embeddings_generated", count=len(embeddings_list))
         return embeddings_list
@@ -76,7 +85,7 @@ def index_records(records: List[KBRecord]):
     
     BATCH_SIZE = 32
     
-    # SDE-3: Process in batches to prevent Out-Of-Memory (OOM) crashes on large doc sets
+    # Process in batches to prevent Out-Of-Memory (OOM) crashes on large doc sets
     for i in range(0, len(records), BATCH_SIZE):
         batch = records[i:i + BATCH_SIZE]
         

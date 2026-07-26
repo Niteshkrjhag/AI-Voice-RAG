@@ -25,10 +25,10 @@ class AudioStreamPipeline:
         
         # We need the full history of the conversation so the AI has context
         self.full_context = ""
+        self.pending_text = ""
         
-        # Throttler to protect Gemini Free Tier limits with dynamic pattern (10s, 30s, 60s)
+        # Throttler to protect Gemini Free Tier limits (15 seconds)
         self.last_gemini_call = 0
-        self.gemini_call_count = 0
         
         # We'll setup the AssemblyAI transcriber later when the audio actually starts playing
         self.transcriber = None
@@ -36,76 +36,94 @@ class AudioStreamPipeline:
         # Grab the current event loop so we can run background tasks easily
         self._loop = asyncio.get_running_loop()
         
-    def _handle_transcript(self, text: str, is_final: bool):
-        """Called by transcriber thread via call_soon_threadsafe"""
-        received_time = time.time()
-        # Fire off UI update
-        asyncio.run_coroutine_threadsafe(self.on_transcript_callback(text, is_final), self._loop)
-        
+    def start(self):
+        """Start the background processing loop."""
+        if not hasattr(self, "_flush_task"):
+            self._flush_task = asyncio.create_task(self._flush_loop())
+            
+    def add_transcript(self, text: str, is_final: bool, received_time: float):
+        """Called by the frontend or test script to push text."""
         # Update full context if final
         if is_final:
             self.full_context += f" {text}"
-            # SDE-3: Prevent unbounded memory leak and API context window exhaustion
+            self.pending_text += f" {text}"
+            # Prevent unbounded memory leak
             if len(self.full_context) > 4000:
                 self.full_context = self.full_context[-4000:]
-            
-        # Analyze transcript (fire and forget so it doesn't block audio ingestion)
-        asyncio.run_coroutine_threadsafe(self._analyze_and_nudge(text, is_final, received_time), self._loop)
-            
-    async def _analyze_and_nudge(self, text: str, is_final: bool, received_time: float):
-        """
-        Takes the spoken text, asks Gemini to find signals (like anger or sales opportunities),
-        and then passes those signals to the Nudge Engine to decide if an alert should be shown.
-        """
-        # We only want to run the expensive AI extraction when a sentence is fully finished (is_final).
-        # Running it on every single partial word would waste a lot of money and time.
-        if not is_final:
-            return
-            
-        # Dynamic Throttling Pattern: 10s -> 30s -> 60s -> repeat
-        throttle_pattern = [10.0, 30.0, 60.0]
-        current_delay = throttle_pattern[self.gemini_call_count % 3]
+                
+        # Fire off UI update
+        asyncio.create_task(self.on_transcript_callback(text, is_final))
         
-        if time.time() - self.last_gemini_call < current_delay:
-            return
+    async def _flush_loop(self):
+        """Background task that reliably flushes pending text every 15 seconds."""
+        while True:
+            await asyncio.sleep(15.0)
             
-        self.last_gemini_call = time.time()
-        self.gemini_call_count += 1
-            
-        try:
-            # Ask Gemini (SignalExtractor) what it thinks about this sentence
-            result = await self.extractor.analyze_transcript(text, self.full_context)
-            signals = result.get("signals", {})
-            
-            # If Gemini didn't find anything interesting, just stop here
-            if not signals:
-                return
+            text_to_analyze = self.pending_text.strip()
+            if not text_to_analyze:
+                continue
                 
-            # The NudgeEngine checks if we already showed this exact alert recently (suppression cooldown)
-            nudges = self.nudge_engine.process_signals(signals)
-            
-            # Finally, loop through any valid nudges and send them to the Web Dashboard!
-            for nudge in nudges:
-                e2e_latency = int((time.time() - received_time) * 1000)
-                nudge_generated_at = time.time() * 1000
-                log.info("e2e_latency_measured", llm_latency_ms=result.get("latency_ms", 0), total_e2e_ms=e2e_latency, signal=nudge.get("type"))
+            self.pending_text = ""
+            start_time = time.time()
                 
+            try:
+                # Ask Gemini (SignalExtractor) what it thinks
+                result = await self.extractor.analyze_transcript(text_to_analyze, self.full_context)
+                signals = result.get("signals", {})
+                
+                # Emit telemetry for LLM analysis
                 await self.on_nudge_callback(
-                    nudge_type=nudge.get("type", "alert").lower(),
-                    message=nudge.get("message", ""),
+                    nudge_type="telemetry_update",
+                    message="",
                     context={
                         "llm_latency_ms": result.get("latency_ms", 0),
-                        "backend_e2e_ms": e2e_latency,
-                        "generated_at_ms": nudge_generated_at
+                        "backend_e2e_ms": int((time.time() - start_time) * 1000),
+                        "generated_at_ms": time.time() * 1000
                     }
                 )
-        except Exception as e:
-            log.error("analyze_and_nudge_failed", error=str(e), text=text)
+                
+                if not signals:
+                    continue
+                    
+                # Check suppression cooldown
+                nudges = self.nudge_engine.process_signals(signals)
+                
+                # Send valid nudges to the Web Dashboard
+                for nudge in nudges:
+                    e2e_latency = int((time.time() - start_time) * 1000)
+                    nudge_generated_at = time.time() * 1000
+                    log.info("e2e_latency_measured", llm_latency_ms=result.get("latency_ms", 0), total_e2e_ms=e2e_latency, signal=nudge.get("type"))
+                    
+                    await self.on_nudge_callback(
+                        nudge_type=nudge.get("type", "alert").lower(),
+                        message=nudge.get("message", ""),
+                        context={
+                            "llm_latency_ms": result.get("latency_ms", 0),
+                            "backend_e2e_ms": e2e_latency,
+                            "generated_at_ms": nudge_generated_at
+                        }
+                    )
+            except Exception as e:
+                log.error("flush_loop_failed", error=str(e), text=text_to_analyze)
             
     async def process_file(self, wav_path: str):
         """Simulate a real-time stream by reading a wav file in chunks."""
-        self.transcriber = StreamingTranscriber(on_transcript=self._handle_transcript)
-        # SDE-3: Offload synchronous WebSocket connection to a background thread
+        self.start()
+        
+        # We need a wrapper to call add_transcript from the threaded transcriber
+        def _handle_transcript_threadsafe(text: str, is_final: bool):
+            asyncio.run_coroutine_threadsafe(
+                self.on_transcript_callback(text, is_final), self._loop
+            )
+            if is_final:
+                # We can't await add_transcript here easily, so we just mutate state safely
+                self.full_context += f" {text}"
+                self.pending_text += f" {text}"
+                if len(self.full_context) > 4000:
+                    self.full_context = self.full_context[-4000:]
+
+        self.transcriber = StreamingTranscriber(on_transcript=_handle_transcript_threadsafe)
+        # Offload synchronous WebSocket connection to a background thread
         await asyncio.to_thread(self.transcriber.connect)
         
         log.info("start_simulated_stream", file=wav_path)
@@ -127,7 +145,7 @@ class AudioStreamPipeline:
                     if not data:
                         break
                     
-                    # SDE-3: Offload synchronous streaming to a background thread
+                    # Offload synchronous streaming to a background thread
                     await asyncio.to_thread(self.transcriber.stream_audio, data)
                     # Simulate real-time delay (roughly 4096 bytes at 16khz 16-bit mono is ~0.128 seconds)
                     await asyncio.sleep(0.128)
