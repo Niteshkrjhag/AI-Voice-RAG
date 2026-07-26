@@ -31,26 +31,26 @@ graph TD
     classDef frontend fill:#B45309,stroke:#D97706,stroke-width:2px,color:#FFFFFF,rx:5,ry:5;
 
     %% 1. Data Ingestion Flow (Offline)
-    Crawler[1a. 🕷️ Crawl4AI] --> Cleaner[1b. 🧹 Data Cleaner & PII Redactor]
-    Cleaner --> Chunker[1c. ✂️ Semantic Chunker]
-    Chunker --> Embedder[1d. 🧠 SentenceTransformer]
-    Embedder -->|1e. Upsert Vectors| Qdrant[(📚 Qdrant Vector DB)]
+    Crawler[1a. Crawl4AI Pipeline] --> Cleaner[1b. Data Cleaner & PII Redactor]
+    Cleaner --> Chunker[1c. Semantic Chunker]
+    Chunker --> Embedder[1d. SentenceTransformer]
+    Embedder -->|1e. Upsert Vectors| Qdrant[(Qdrant Vector DB)]
     
     %% 2. Main Conversational RAG Flow
-    User((2a. 🗣️ Customer)) -->|2b. Speaks| Vapi[2c. 📞 Vapi Voice Platform]
-    Vapi -->|2d. Custom Tool Request| FastAPI[2e. ⚙️ FastAPI RAG Server]
+    User((2a. Customer Caller)) -->|2b. Speaks| Vapi[2c. Vapi Voice Platform]
+    Vapi -->|2d. Custom Tool Request| FastAPI[2e. FastAPI RAG Server]
     FastAPI -->|2f. Semantic Search| Qdrant
     Qdrant -->|2g. Policy Documents| FastAPI
     FastAPI -->|2h. JSON Response| Vapi
     Vapi -->|2i. Speaks Answer| User
     
     %% 3. Live Insights Flow
-    Vapi -.->|3a. Audio Fork| StreamServer[3b. 🎧 FastAPI Stream Server]
-    StreamServer -->|3c. WebSocket| AAI[3d. 🎙️ AssemblyAI ASR]
+    Vapi -.->|3a. Audio Fork| StreamServer[3b. FastAPI Stream Server]
+    StreamServer -->|3c. WebSocket| AAI[3d. AssemblyAI ASR]
     AAI -->|3e. Live Transcripts| StreamServer
-    StreamServer -->|3f. Extract Signals| Gemini[3g. 🧠 Gemini 3.5 Flash]
-    Gemini -->|3h. Frustration/Sales| Nudge[3i. 🚨 Nudge Engine]
-    Nudge -->|3j. WebSocket Push| Dashboard[3k. 💻 Web UI Dashboard]
+    StreamServer -->|3f. Extract Signals| Gemini[3g. Gemini 3.5 Flash LLM]
+    Gemini -->|3h. Frustration/Sales| Nudge[3i. Nudge Engine]
+    Nudge -->|3j. WebSocket Push| Dashboard[3k. Web UI Dashboard]
     
     %% Apply Styles
     class Vapi,AAI,Gemini,Crawler external;
