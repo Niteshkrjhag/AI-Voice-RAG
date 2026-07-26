@@ -24,11 +24,11 @@ Here is a high-level view of how data flows through the system during an active 
 
 ```mermaid
 graph TD
-    %% Define Styles
-    classDef external fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef backend fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef database fill:#bfb,stroke:#333,stroke-width:2px;
-    classDef frontend fill:#fbb,stroke:#333,stroke-width:2px;
+    %% Define Styles (High-Contrast & Professional)
+    classDef external fill:#1E293B,stroke:#475569,stroke-width:2px,color:#F8FAFC,rx:5,ry:5;
+    classDef backend fill:#1D4ED8,stroke:#2563EB,stroke-width:2px,color:#FFFFFF,rx:5,ry:5;
+    classDef database fill:#047857,stroke:#059669,stroke-width:2px,color:#FFFFFF,rx:5,ry:5;
+    classDef frontend fill:#B45309,stroke:#D97706,stroke-width:2px,color:#FFFFFF,rx:5,ry:5;
 
     %% 1. Data Ingestion Flow (Offline)
     Crawler[1a. 🕷️ Crawl4AI] --> Cleaner[1b. 🧹 Data Cleaner & PII Redactor]
