@@ -14,17 +14,17 @@ TEST_QUERIES = [
     {
         "query": "What are the rules for pre-existing diseases?",
         "expected_concept": "Waiting periods or coverage limits for PEDs.",
-        "verdict_logic": "Correct if it mentions the waiting period (e.g. 2-4 years) for pre-existing conditions."
+        "verdict_logic": "Correct if it mentions the waiting period (e.g. 36 months) for pre-existing conditions."
     },
     {
         "query": "Can I add my newborn baby to my health policy?",
         "expected_concept": "Maternity or dependent coverage rules.",
-        "verdict_logic": "Correct if it explains the timeline/process for adding a newborn (usually 90 days)."
+        "verdict_logic": "Correct if it explains the timeline/process for adding a newborn (usually 91 days)."
     },
     {
-        "query": "What are the partnership benefits for a branch manager?",
-        "expected_concept": "Operational and marketing support for partners.",
-        "verdict_logic": "Correct if it mentions partnership_benefits or branch support."
+        "query": "Does the policy cover COVID-19?",
+        "expected_concept": "Coverage for viral infections.",
+        "verdict_logic": "Correct if it mentions viral infections are covered after 30 days."
     },
     {
         "query": "Is dental care covered under the basic plan?",
@@ -32,9 +32,9 @@ TEST_QUERIES = [
         "verdict_logic": "Correct if it accurately states whether dental is included or excluded."
     },
     {
-        "query": "How do I file a cashless claim?",
-        "expected_concept": "Network hospital procedure and pre-authorization.",
-        "verdict_logic": "Correct if it details the TPA / pre-auth process for cashless claims."
+        "query": "I already have corporate insurance from my employer.",
+        "expected_concept": "Objection handling regarding supplemental coverage.",
+        "verdict_logic": "Correct if it provides the objection handling script about losing coverage when switching jobs."
     }
 ]
 
