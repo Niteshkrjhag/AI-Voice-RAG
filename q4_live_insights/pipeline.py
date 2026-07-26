@@ -5,6 +5,7 @@ from shared.logger import get_logger
 from q4_live_insights.transcriber import StreamingTranscriber
 from q4_live_insights.signal_extractor import SignalExtractor
 from q4_live_insights.nudge_engine import NudgeEngine
+from shared.telemetry import store as telemetry_store
 
 log = get_logger("q4.pipeline")
 
@@ -71,16 +72,8 @@ class AudioStreamPipeline:
                 result = await self.extractor.analyze_transcript(text_to_analyze, self.full_context)
                 signals = result.get("signals", {})
                 
-                # Emit telemetry for LLM analysis
-                await self.on_nudge_callback(
-                    nudge_type="telemetry_update",
-                    message="",
-                    context={
-                        "llm_latency_ms": result.get("latency_ms", 0),
-                        "backend_e2e_ms": int((time.time() - start_time) * 1000),
-                        "generated_at_ms": time.time() * 1000
-                    }
-                )
+                # Record true E2E latency in the backend store
+                telemetry_store.record_latency(int((time.time() - start_time) * 1000))
                 
                 if not signals:
                     continue
@@ -111,7 +104,7 @@ class AudioStreamPipeline:
         self.start()
         
         # We need a wrapper to call add_transcript from the threaded transcriber
-        def _handle_transcript_threadsafe(text: str, is_final: bool):
+        def _handle_transcript_threadsafe(text: str, is_final: bool, received_time: float):
             asyncio.run_coroutine_threadsafe(
                 self.on_transcript_callback(text, is_final), self._loop
             )

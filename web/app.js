@@ -27,45 +27,20 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener('click', () => switchTab(btn.getAttribute('data-target')));
     });
 
-    // --- Global Telemetry State ---
-    let telemetryState = {
-        apiHits: 0,
-        latencies: []
-    };
-
-    function calculatePercentile(arr, p) {
-        if (arr.length === 0) return 0;
-        const sorted = [...arr].sort((a, b) => a - b);
-        const index = Math.ceil((p / 100) * sorted.length) - 1;
-        return sorted[index];
-    }
-
-    function updateTelemetry(hitsIncrement = 0, newE2ELatency = null, llmLatency = 0, deliveryLatency = 0) {
-        telemetryState.apiHits += hitsIncrement;
-        document.getElementById('metric-api-hits').innerText = telemetryState.apiHits;
-
-        if (newE2ELatency !== null) {
-            telemetryState.latencies.push(newE2ELatency);
-            
-            // Calculate Avg
-            const sum = telemetryState.latencies.reduce((a, b) => a + b, 0);
-            const avg = Math.round(sum / telemetryState.latencies.length);
-            
-            // Calculate P50 (Median) and P95
-            const p50 = calculatePercentile(telemetryState.latencies, 50);
-            const p95 = calculatePercentile(telemetryState.latencies, 95);
-
-            document.getElementById('metric-current-e2e').innerText = `${newE2ELatency}ms`;
-            document.getElementById('metric-avg-e2e').innerText = `${avg}ms`;
-            document.getElementById('metric-p50').innerText = `${p50}ms`;
-            document.getElementById('metric-p95').innerText = `${p95}ms`;
-            
-            if (llmLatency > 0) {
-                document.getElementById('metric-llm').innerText = `${llmLatency}ms`;
-            }
-            if (deliveryLatency > 0) {
-                document.getElementById('metric-delivery').innerText = `${deliveryLatency}ms`;
-            }
+    // --- Telemetry handled entirely by Backend now ---
+    function renderBackendTelemetry(metrics) {
+        document.getElementById('metric-api-hits').innerText = metrics.api_hits || 0;
+        document.getElementById('metric-current-e2e').innerText = `${metrics.current_e2e_ms || 0}ms`;
+        document.getElementById('metric-avg-e2e').innerText = `${metrics.avg_e2e_ms || 0}ms`;
+        document.getElementById('metric-p50').innerText = `${metrics.p50_ms || 0}ms`;
+        document.getElementById('metric-p95').innerText = `${metrics.p95_ms || 0}ms`;
+        
+        // Show error rate on the dashboard (assuming there's an element, or just hijack delivery)
+        // Since there is no explicit error element, we'll override metric-delivery for error rate to ensure it's visible.
+        const errorEl = document.getElementById('metric-delivery');
+        if (errorEl) {
+            errorEl.innerText = `${metrics.error_rate_percent || 0}%`;
+            errorEl.previousElementSibling.innerText = "API Error Rate"; // rename the label
         }
     }
 
@@ -82,7 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
         resultsContainer.innerHTML = '<p class="empty-state">Searching...</p>';
 
         try {
-            updateTelemetry(1); // Track Q2 Search API Hit
             // Fetch from Q2 API mounted on unified server
             const res = await fetch('/q2/api/v1/search', {
                 method: 'POST',
@@ -164,12 +138,10 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 const type = data.type || "alert";
                 
-                // Track Telemetry invisibly
+                // Track Telemetry from Backend
                 if (type === "telemetry_update") {
-                    if (data.context && data.context.backend_e2e_ms) {
-                        const nowMs = Date.now();
-                        const deliveryLatency = data.context.generated_at_ms ? Math.round(nowMs - data.context.generated_at_ms) : 0;
-                        updateTelemetry(1, data.context.backend_e2e_ms, data.context.llm_latency_ms, deliveryLatency);
+                    if (data.metrics) {
+                        renderBackendTelemetry(data.metrics);
                     }
                     return; // Skip visual card generation
                 }
@@ -214,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
         startQ4Btn.textContent = 'Streaming...';
 
         try {
-            updateTelemetry(1); // Track Q4 Stream API Hit
             await fetch('/q4/start_stream', { method: 'POST' });
         } catch (e) {
             console.error("Failed to start stream", e);

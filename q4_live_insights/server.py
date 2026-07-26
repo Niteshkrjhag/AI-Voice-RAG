@@ -7,17 +7,47 @@ import json
 
 from fastapi.middleware.cors import CORSMiddleware
 
+from contextlib import asynccontextmanager
 from shared.logger import get_logger
 from q4_live_insights.pipeline import AudioStreamPipeline
 from pydantic import BaseModel
+from shared.telemetry import store as telemetry_store
 
 # 1. Mount the global web directory
 WEB_DIR = Path(__file__).parent.parent / "web"
 
 log = get_logger("q4.server")
 
+# This list keeps track of all active browser windows connected to our WebSocket.
+# We need this so we can broadcast the live nudges to everyone looking at the dashboard.
+active_connections: list[WebSocket] = []
+
+async def broadcast_telemetry_loop():
+    while True:
+        await asyncio.sleep(1.0)
+        metrics = telemetry_store.get_metrics()
+        payload = {
+            "type": "telemetry_update",
+            "metrics": metrics
+        }
+        dead_connections = []
+        for connection in active_connections:
+            try:
+                await connection.send_text(json.dumps(payload))
+            except Exception:
+                dead_connections.append(connection)
+        for dc in dead_connections:
+            if dc in active_connections:
+                active_connections.remove(dc)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(broadcast_telemetry_loop())
+    yield
+    task.cancel()
+
 # Initialize the FastAPI web server. This will handle HTTP requests and WebSocket connections.
-app = FastAPI(title="Live Insights Dashboard")
+app = FastAPI(title="Live Insights Dashboard", lifespan=lifespan)
 
 # Add CORS so dashboards on other domains can connect
 app.add_middleware(
@@ -29,10 +59,6 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
-
-# This list keeps track of all active browser windows connected to our WebSocket.
-# We need this so we can broadcast the live nudges to everyone looking at the dashboard.
-active_connections: list[WebSocket] = []
 
 # Global state lock to prevent concurrent audio streams
 is_streaming = False

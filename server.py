@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import uvicorn
 
 from shared.logger import get_logger
+from shared.telemetry import store as telemetry_store
 
 # Import Q2 API and Q4 Server
 from q2_knowledge_base.api import app as q2_app
@@ -32,10 +33,19 @@ app.add_middleware(
 )
 
 @app.middleware("http")
-async def log_headers(request: Request, call_next):
+async def global_telemetry_interceptor(request: Request, call_next):
+    # Record every single API hit
+    telemetry_store.record_hit()
+    
     log.info("incoming_request", path=request.url.path, headers=dict(request.headers))
-    response = await call_next(request)
-    return response
+    try:
+        response = await call_next(request)
+        if response.status_code >= 400:
+            telemetry_store.record_error()
+        return response
+    except Exception as e:
+        telemetry_store.record_error()
+        raise e
 
 # 3. Mount existing routers from other sub-applications
 app.mount("/q2", q2_app)
